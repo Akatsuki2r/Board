@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   comboFromKeyboardEvent,
   comboMatchesEvent,
+  findCoreShortcutConflict,
   DEFAULT_SHORTCUTS,
   findShortcutConflict,
   formatCombo,
@@ -103,6 +104,8 @@ describe("studio shortcut config", () => {
       key: "ArrowRight",
     });
     expect(DEFAULT_SHORTCUTS.saveViewpoint).toMatchObject({ key: "m" });
+    expect(DEFAULT_SHORTCUTS.quickUndo).toMatchObject({ key: "z" });
+    expect(DEFAULT_SHORTCUTS.quickErase).toMatchObject({ key: "e" });
     expect(DEFAULT_SHORTCUTS.forwardViewport).toMatchObject({
       key: "Backspace",
       shift: true,
@@ -113,6 +116,16 @@ describe("studio shortcut config", () => {
         keyEvent("ArrowLeft", "ArrowLeft"),
       ),
     ).toBe(true);
+  });
+
+  it("detects conflicts with core Excalidraw and browser shortcuts", () => {
+    expect(findCoreShortcutConflict({ key: "s", ctrl: true })).toContain(
+      "Save",
+    );
+    expect(
+      findCoreShortcutConflict({ key: "z", ctrl: true, shift: true }),
+    ).toContain("Redo");
+    expect(findCoreShortcutConflict({ key: "j" })).toBeNull();
   });
 
   it("drops duplicate assignments from persisted maps", () => {

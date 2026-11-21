@@ -34,6 +34,17 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
   },
   { id: "textTool", label: "Text annotation", scope: "presentation" },
   {
+    id: "quickUndo",
+    label: "Undo last annotation",
+    scope: "presentation",
+    description: "Uses Excalidraw's existing undo stack.",
+  },
+  {
+    id: "quickErase",
+    label: "Quick eraser",
+    scope: "presentation",
+  },
+  {
     id: "fitToContent",
     label: "Fit content to viewport",
     scope: "presentation",
@@ -86,6 +97,8 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   arrowTool: { key: "a" },
   freehandTool: { key: "d" },
   textTool: { key: "t" },
+  quickUndo: { key: "z" },
+  quickErase: { key: "e" },
   fitToContent: { key: "f" },
   previousViewport: { key: "Backspace" },
   forwardViewport: { key: "Backspace", shift: true },
@@ -95,6 +108,36 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   goHome: { key: "m", shift: true },
   toggleViewpointOverview: { key: "u" },
 };
+
+/** Core bindings that cannot be silently taken over by a global shortcut. */
+const CORE_SHORTCUT_CONFLICTS: { combo: KeyCombo; description: string }[] = [
+  { combo: { key: "s", ctrl: true }, description: "Excalidraw: Save to file" },
+  {
+    combo: { key: "s", ctrl: true, shift: true },
+    description: "Excalidraw / browser: Save as",
+  },
+  { combo: { key: "z", ctrl: true }, description: "Excalidraw: Undo" },
+  {
+    combo: { key: "z", ctrl: true, shift: true },
+    description: "Excalidraw: Redo",
+  },
+  { combo: { key: "y", ctrl: true }, description: "Excalidraw: Redo" },
+  {
+    combo: { key: "Backspace" },
+    description: "Excalidraw: Delete selection",
+  },
+  { combo: { key: "Delete" }, description: "Excalidraw: Delete selection" },
+  { combo: { key: "Space" }, description: "Excalidraw: Pan canvas" },
+  { combo: { key: "p", ctrl: true }, description: "Browser: Print" },
+  {
+    combo: { key: "/", ctrl: true },
+    description: "Excalidraw: Command palette",
+  },
+];
+
+export const findCoreShortcutConflict = (combo: KeyCombo): string | null =>
+  CORE_SHORTCUT_CONFLICTS.find((entry) => combosEqual(entry.combo, combo))
+    ?.description ?? null;
 
 const createDefaults = (): ShortcutMap => ({ ...DEFAULT_SHORTCUTS });
 

@@ -52,6 +52,7 @@ const makeStudio = () =>
     goBack: vi.fn(),
     goToAdjacentViewpoint: vi.fn(),
     returnToNavigation: vi.fn(),
+    quickUndo: vi.fn(),
     setTool: vi.fn(),
   } as unknown as StudioContextValue);
 
@@ -80,7 +81,7 @@ describe("registerStudioActions", () => {
   it("registers studio actions plus the de-conflicted core bindings once", () => {
     const studio = makeStudio();
     registerStudioActions(api, () => studio);
-    expect(api.registerAction).toHaveBeenCalledTimes(18);
+    expect(api.registerAction).toHaveBeenCalledTimes(20);
     expect(find("studioExitPresentation")).toBeDefined();
     expect(find("deleteSelectedElements")).toBeDefined();
     expect(find("deselect")).toBeDefined();
@@ -118,6 +119,23 @@ describe("registerStudioActions", () => {
         {} as never,
       ),
     ).toBe(true);
+  });
+
+  it("binds presentation-only quick undo and eraser", () => {
+    const studio = makeStudio();
+    registerStudioActions(api, () => studio);
+    const undo = find("studioQuickUndo");
+    const erase = find("studioQuickErase");
+    expect(
+      undo.keyTest?.(keyEvent("z", "KeyZ"), appState, [], {} as never),
+    ).toBe(true);
+    expect(
+      erase.keyTest?.(keyEvent("e", "KeyE"), appState, [], {} as never),
+    ).toBe(true);
+    undo.perform([], appState, null, {} as never);
+    erase.perform([], appState, null, {} as never);
+    expect(studio.quickUndo).toHaveBeenCalledTimes(1);
+    expect(studio.setTool).toHaveBeenCalledWith("eraser");
   });
 
   it("lets arrow keys nudge elements when a selection exists", () => {

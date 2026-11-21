@@ -12,6 +12,7 @@ import { appJotaiStore } from "../app-jotai";
 
 import {
   isPresentationModeAtom,
+  recordingStateAtom,
   studioPreferencesAtom,
   studioSettingsOpenAtom,
 } from "./atoms";
@@ -45,7 +46,9 @@ type StudioActionName =
   | "studioNavigateTool"
   | "studioArrowTool"
   | "studioFreehandTool"
-  | "studioTextTool";
+  | "studioTextTool"
+  | "studioQuickUndo"
+  | "studioQuickErase";
 
 type StudioAction = Merge<Action, { name: StudioActionName }>;
 
@@ -66,6 +69,8 @@ const ACTION_NAMES: Record<StudioShortcutId, StudioActionName> = {
   arrowTool: "studioArrowTool",
   freehandTool: "studioFreehandTool",
   textTool: "studioTextTool",
+  quickUndo: "studioQuickUndo",
+  quickErase: "studioQuickErase",
 };
 
 const noUpdate = { captureUpdate: CaptureUpdateAction.NEVER } as const;
@@ -102,6 +107,8 @@ export const registerStudioActions = (
     arrowTool: () => getStudio().setTool("arrow"),
     freehandTool: () => getStudio().setTool("freedraw"),
     textTool: () => getStudio().setTool("text"),
+    quickUndo: () => getStudio().quickUndo(),
+    quickErase: () => getStudio().setTool("eraser"),
   };
 
   const actions: StudioAction[] = SHORTCUT_DEFINITIONS.map((definition) => ({
@@ -123,7 +130,15 @@ export const registerStudioActions = (
       if (!combo) {
         return false;
       }
-      if (definition.scope === "presentation" && !isPresenting()) {
+      const recordingActive = ["recording", "paused"].includes(
+        appJotaiStore.get(recordingStateAtom).status,
+      );
+      const allowed =
+        definition.scope === "global" ||
+        (definition.scope === "presentation" && isPresenting()) ||
+        (definition.scope === "recording" && recordingActive) ||
+        (definition.scope === "editing" && !isPresenting());
+      if (!allowed) {
         return false;
       }
       // Arrow keys remain element-nudge shortcuts when a selection exists.
