@@ -130,7 +130,7 @@ export const registerStudioActions = (
       if (
         (definition.id === "previousViewpoint" ||
           definition.id === "nextViewpoint") &&
-        Object.keys(appState.selectedElementIds).length > 0
+        Object.keys(appState.selectedElementIds ?? {}).length > 0
       ) {
         return false;
       }

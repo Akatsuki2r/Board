@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MAX_ZOOM, MIN_ZOOM, ZOOM_STEP } from "@excalidraw/common";
 import { getNormalizedZoom } from "@excalidraw/excalidraw/scene/normalize";
@@ -47,9 +47,16 @@ export const useStudioNavigation = (
   const [, setOverviewOpen] = useAtom(viewpointOverviewOpenAtom);
   const transitionRef = useRef<CameraTransition | null>(null);
 
-  const boardKey = getBoardKey(
-    appRootRef.current?.ownerDocument.defaultView ?? null,
+  // The root ref is populated after the first render, so resolve the board
+  // key again on mount (URL-hash boards would otherwise be mis-classified).
+  const [boardKey, setBoardKey] = useState(() =>
+    getBoardKey(appRootRef.current?.ownerDocument.defaultView ?? null),
   );
+  useEffect(() => {
+    setBoardKey(
+      getBoardKey(appRootRef.current?.ownerDocument.defaultView ?? null),
+    );
+  }, [appRootRef]);
   const viewpoints = useMemo(
     () => preferences.viewpointsByBoard[boardKey] ?? [],
     [boardKey, preferences.viewpointsByBoard],
@@ -81,16 +88,23 @@ export const useStudioNavigation = (
   }, []);
 
   const setViewpoints = useCallback(
-    (next: SavedViewpoint[]) => {
-      setPreferences({
-        ...preferences,
+    (
+      update:
+        | SavedViewpoint[]
+        | ((current: SavedViewpoint[]) => SavedViewpoint[]),
+    ) => {
+      setPreferences((current) => ({
+        ...current,
         viewpointsByBoard: {
-          ...preferences.viewpointsByBoard,
-          [boardKey]: next,
+          ...current.viewpointsByBoard,
+          [boardKey]:
+            typeof update === "function"
+              ? update(current.viewpointsByBoard[boardKey] ?? [])
+              : update,
         },
-      });
+      }));
     },
-    [boardKey, preferences, setPreferences],
+    [boardKey, setPreferences],
   );
 
   const moveCamera = useCallback(
@@ -248,16 +262,10 @@ export const useStudioNavigation = (
         return;
       }
       const viewpoint = buildViewpoint(name);
-      setViewpoints([...viewpoints, viewpoint]);
+      setViewpoints((current) => [...current, viewpoint]);
       setActiveViewpointId(viewpoint.id);
     },
-    [
-      buildViewpoint,
-      excalidrawAPI,
-      setActiveViewpointId,
-      setViewpoints,
-      viewpoints,
-    ],
+    [buildViewpoint, excalidrawAPI, setActiveViewpointId, setViewpoints],
   );
 
   const goToViewpoint = useCallback(
@@ -295,32 +303,32 @@ export const useStudioNavigation = (
 
   const deleteViewpoint = useCallback(
     (id: string) => {
-      setViewpoints(viewpoints.filter((item) => item.id !== id));
+      setViewpoints((current) => current.filter((item) => item.id !== id));
       if (activeViewpointId === id) {
         setActiveViewpointId(null);
       }
     },
-    [activeViewpointId, setActiveViewpointId, setViewpoints, viewpoints],
+    [activeViewpointId, setActiveViewpointId, setViewpoints],
   );
 
   const renameViewpoint = useCallback(
     (id: string, name: string) => {
-      setViewpoints(
-        viewpoints.map((item) =>
+      setViewpoints((current) =>
+        current.map((item) =>
           item.id === id ? { ...item, name: name.trim() || item.name } : item,
         ),
       );
     },
-    [setViewpoints, viewpoints],
+    [setViewpoints],
   );
 
   const setViewpointNotes = useCallback(
     (id: string, notes: string) => {
-      setViewpoints(
-        viewpoints.map((item) => (item.id === id ? { ...item, notes } : item)),
+      setViewpoints((current) =>
+        current.map((item) => (item.id === id ? { ...item, notes } : item)),
       );
     },
-    [setViewpoints, viewpoints],
+    [setViewpoints],
   );
 
   const moveViewpoint = useCallback(
@@ -330,23 +338,25 @@ export const useStudioNavigation = (
       if (index < 0 || target < 0 || target >= viewpoints.length) {
         return;
       }
-      const reordered = [...viewpoints];
-      [reordered[index], reordered[target]] = [
-        reordered[target],
-        reordered[index],
-      ];
-      setViewpoints(reordered);
+      setViewpoints((current) => {
+        const reordered = [...current];
+        [reordered[index], reordered[target]] = [
+          reordered[target],
+          reordered[index],
+        ];
+        return reordered;
+      });
     },
     [setViewpoints, viewpoints],
   );
 
   const setDefaultViewpoint = useCallback(
     (id: string) => {
-      setViewpoints(
-        viewpoints.map((item) => ({ ...item, isDefault: item.id === id })),
+      setViewpoints((current) =>
+        current.map((item) => ({ ...item, isDefault: item.id === id })),
       );
     },
-    [setViewpoints, viewpoints],
+    [setViewpoints],
   );
 
   const resetView = useCallback(() => {

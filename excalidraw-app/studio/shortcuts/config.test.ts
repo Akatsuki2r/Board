@@ -115,6 +115,15 @@ describe("studio shortcut config", () => {
     ).toBe(true);
   });
 
+  it("drops duplicate assignments from persisted maps", () => {
+    const parsed = validateShortcutMap({
+      ...DEFAULT_SHORTCUTS,
+      freehandTool: { key: "j" },
+    });
+    expect(parsed.zoomIn).toMatchObject({ key: "j" });
+    expect(parsed.freehandTool).toBeUndefined();
+  });
+
   it("validates persisted shortcut maps and preserves disabled actions", () => {
     const parsed = validateShortcutMap({
       zoomIn: null,

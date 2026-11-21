@@ -115,6 +115,35 @@ describe("useStudioNavigation", () => {
     ).toHaveLength(1);
   });
 
+  it("scopes viewpoints to a hashed board", () => {
+    view.location.hash = "#room-9";
+    try {
+      const { api } = makeApi();
+      const { result } = renderNavigation(api);
+      act(() => result.current.saveViewpoint("Shared"));
+      expect(
+        appJotaiStore.get(studioPreferencesAtom).viewpointsByBoard[
+          "hash:room-9"
+        ],
+      ).toHaveLength(1);
+    } finally {
+      view.location.hash = "";
+    }
+  });
+
+  it("does not lose sequential viewpoint updates in one tick", () => {
+    const { api } = makeApi();
+    const { result } = renderNavigation(api);
+    act(() => {
+      result.current.saveViewpoint("A");
+      result.current.saveViewpoint("B");
+    });
+    expect(result.current.viewpoints.map((item) => item.name)).toEqual([
+      "A",
+      "B",
+    ]);
+  });
+
   it("navigates back and forward through deliberate camera moves", () => {
     const { api } = makeApi();
     const { result } = renderNavigation(api);

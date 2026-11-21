@@ -4,7 +4,15 @@ import {
   createNavigationHistory,
   type NavigationHistory,
 } from "./navigation/history";
-import { loadStudioPreferences, saveStudioPreferences } from "./preferences";
+import {
+  loadStudioPreferences,
+  saveStudioPreferences,
+  type StudioPreferences,
+} from "./preferences";
+
+export type PreferencesUpdate =
+  | StudioPreferences
+  | ((previous: StudioPreferences) => StudioPreferences);
 
 export const isPresentationModeAtom = atom(false);
 
@@ -52,7 +60,11 @@ export const isPresentationToolbarHiddenAtom = atom(false);
 
 export const studioPreferencesAtom = atom(
   loadStudioPreferences(),
-  (_get, set, preferences: Parameters<typeof saveStudioPreferences>[0]) => {
+  (get, set, update: PreferencesUpdate) => {
+    const preferences =
+      typeof update === "function"
+        ? update(get(studioPreferencesAtom))
+        : update;
     set(studioPreferencesAtom, preferences);
     saveStudioPreferences(preferences);
   },

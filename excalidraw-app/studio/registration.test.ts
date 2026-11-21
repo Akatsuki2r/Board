@@ -120,6 +120,28 @@ describe("registerStudioActions", () => {
     ).toBe(true);
   });
 
+  it("lets arrow keys nudge elements when a selection exists", () => {
+    const studio = makeStudio();
+    registerStudioActions(api, () => studio);
+    const action = find("studioPreviousViewpoint");
+    expect(
+      action.keyTest?.(
+        keyEvent("ArrowLeft", "ArrowLeft"),
+        appState,
+        [],
+        {} as never,
+      ),
+    ).toBe(true);
+    expect(
+      action.keyTest?.(
+        keyEvent("ArrowLeft", "ArrowLeft"),
+        { ...appState, selectedElementIds: { a: true } } as AppState,
+        [],
+        {} as never,
+      ),
+    ).toBe(false);
+  });
+
   it("reads the live studio context at dispatch time", () => {
     const first = makeStudio();
     const second = makeStudio();

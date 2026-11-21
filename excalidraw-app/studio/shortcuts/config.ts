@@ -247,5 +247,21 @@ export const validateShortcutMap = (value: unknown): ShortcutMap => {
       meta: candidate.meta === true,
     };
   }
+
+  // A hand-edited or older storage payload could contain duplicates; keep the
+  // first assignment so the action manager never cancels both actions.
+  const seen = new Set<string>();
+  for (const definition of SHORTCUT_DEFINITIONS) {
+    const combo = result[definition.id];
+    if (!combo) {
+      continue;
+    }
+    const signature = canonical(combo);
+    if (seen.has(signature)) {
+      delete result[definition.id];
+    } else {
+      seen.add(signature);
+    }
+  }
   return result;
 };
