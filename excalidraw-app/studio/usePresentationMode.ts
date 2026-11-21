@@ -14,6 +14,7 @@ import {
   studioPreferencesAtom,
   viewportHistoryAtom,
 } from "./atoms";
+import { createNavigationHistory } from "./navigation/history";
 import { captureViewport, type StudioViewport } from "./viewport";
 
 export type { StudioViewport } from "./viewport";
@@ -52,7 +53,7 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
     setIsPresenting(true);
     setPresentationStartedAt(Date.now());
     // A new presentation starts a fresh navigation history.
-    setViewportHistory([]);
+    setViewportHistory(createNavigationHistory());
 
     // Start from a neutral tool so navigation works immediately. Annotations
     // switch tools on demand without leaving Presentation Mode.

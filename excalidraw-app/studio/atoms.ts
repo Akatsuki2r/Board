@@ -1,15 +1,21 @@
 import { atom } from "../app-jotai";
 
+import {
+  createNavigationHistory,
+  type NavigationHistory,
+} from "./navigation/history";
 import { loadStudioPreferences, saveStudioPreferences } from "./preferences";
-
-import type { StudioViewport } from "./viewport";
 
 export const isPresentationModeAtom = atom(false);
 
-/** In-session back stack of discrete camera moves (not continuous panning). */
-export const viewportHistoryAtom = atom<StudioViewport[]>([]);
+/** In-session back/forward stacks of deliberate camera moves. */
+export const viewportHistoryAtom = atom<NavigationHistory>(
+  createNavigationHistory(),
+);
 
 export const activeViewpointIdAtom = atom<string | null>(null);
+
+export const viewpointOverviewOpenAtom = atom(false);
 
 export const studioSettingsOpenAtom = atom(false);
 
