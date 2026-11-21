@@ -80,7 +80,7 @@ describe("registerStudioActions", () => {
   it("registers studio actions plus the de-conflicted core bindings once", () => {
     const studio = makeStudio();
     registerStudioActions(api, () => studio);
-    expect(api.registerAction).toHaveBeenCalledTimes(14);
+    expect(api.registerAction).toHaveBeenCalledTimes(18);
     expect(find("studioExitPresentation")).toBeDefined();
     expect(find("deleteSelectedElements")).toBeDefined();
     expect(find("deselect")).toBeDefined();

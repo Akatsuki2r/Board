@@ -36,8 +36,12 @@ type StudioActionName =
   | "studioZoomOut"
   | "studioFitToContent"
   | "studioPreviousViewport"
+  | "studioForwardViewport"
   | "studioPreviousViewpoint"
   | "studioNextViewpoint"
+  | "studioSaveViewpoint"
+  | "studioGoHome"
+  | "studioToggleViewpointOverview"
   | "studioNavigateTool"
   | "studioArrowTool"
   | "studioFreehandTool"
@@ -52,8 +56,12 @@ const ACTION_NAMES: Record<StudioShortcutId, StudioActionName> = {
   zoomOut: "studioZoomOut",
   fitToContent: "studioFitToContent",
   previousViewport: "studioPreviousViewport",
+  forwardViewport: "studioForwardViewport",
   previousViewpoint: "studioPreviousViewpoint",
   nextViewpoint: "studioNextViewpoint",
+  saveViewpoint: "studioSaveViewpoint",
+  goHome: "studioGoHome",
+  toggleViewpointOverview: "studioToggleViewpointOverview",
   navigateTool: "studioNavigateTool",
   arrowTool: "studioArrowTool",
   freehandTool: "studioFreehandTool",
@@ -84,8 +92,12 @@ export const registerStudioActions = (
     zoomOut: () => getStudio().zoomOut(),
     fitToContent: () => getStudio().fitToContent(),
     previousViewport: () => getStudio().goBack(),
+    forwardViewport: () => getStudio().goForward(),
     previousViewpoint: () => getStudio().goToAdjacentViewpoint(-1),
     nextViewpoint: () => getStudio().goToAdjacentViewpoint(1),
+    saveViewpoint: () => getStudio().saveViewpoint(),
+    goHome: () => getStudio().resetView(),
+    toggleViewpointOverview: () => getStudio().toggleViewpointOverview(),
     navigateTool: () => getStudio().returnToNavigation(),
     arrowTool: () => getStudio().setTool("arrow"),
     freehandTool: () => getStudio().setTool("freedraw"),
@@ -112,6 +124,14 @@ export const registerStudioActions = (
         return false;
       }
       if (definition.scope === "presentation" && !isPresenting()) {
+        return false;
+      }
+      // Arrow keys remain element-nudge shortcuts when a selection exists.
+      if (
+        (definition.id === "previousViewpoint" ||
+          definition.id === "nextViewpoint") &&
+        Object.keys(appState.selectedElementIds).length > 0
+      ) {
         return false;
       }
       // Escape first exits the active canvas layer (linear editor / in-progress

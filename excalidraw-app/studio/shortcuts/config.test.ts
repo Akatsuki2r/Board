@@ -90,9 +90,29 @@ describe("studio shortcut config", () => {
     ).toBe("zoomIn");
     expect(
       findShortcutConflict(DEFAULT_SHORTCUTS, "togglePresentation", {
-        key: "m",
+        key: "y",
       }),
     ).toBeNull();
+  });
+
+  it("uses the approved navigation and recording-safe defaults", () => {
+    expect(DEFAULT_SHORTCUTS.previousViewpoint).toMatchObject({
+      key: "ArrowLeft",
+    });
+    expect(DEFAULT_SHORTCUTS.nextViewpoint).toMatchObject({
+      key: "ArrowRight",
+    });
+    expect(DEFAULT_SHORTCUTS.saveViewpoint).toMatchObject({ key: "m" });
+    expect(DEFAULT_SHORTCUTS.forwardViewport).toMatchObject({
+      key: "Backspace",
+      shift: true,
+    });
+    expect(
+      comboMatchesEvent(
+        DEFAULT_SHORTCUTS.previousViewpoint as KeyCombo,
+        keyEvent("ArrowLeft", "ArrowLeft"),
+      ),
+    ).toBe(true);
   });
 
   it("validates persisted shortcut maps and preserves disabled actions", () => {

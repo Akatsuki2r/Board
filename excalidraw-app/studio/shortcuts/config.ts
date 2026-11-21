@@ -44,13 +44,35 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
     scope: "presentation",
   },
   {
+    id: "forwardViewport",
+    label: "Return to next viewpoint",
+    scope: "presentation",
+  },
+  {
     id: "previousViewpoint",
     label: "Previous saved viewpoint",
     scope: "presentation",
+    description: "Yields to element nudging when something is selected.",
   },
   {
     id: "nextViewpoint",
     label: "Next saved viewpoint",
+    scope: "presentation",
+    description: "Yields to element nudging when something is selected.",
+  },
+  {
+    id: "saveViewpoint",
+    label: "Save current viewpoint",
+    scope: "presentation",
+  },
+  {
+    id: "goHome",
+    label: "Go to default view / home viewpoint",
+    scope: "presentation",
+  },
+  {
+    id: "toggleViewpointOverview",
+    label: "Toggle viewpoint overview",
     scope: "presentation",
   },
 ];
@@ -66,8 +88,12 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   textTool: { key: "t" },
   fitToContent: { key: "f" },
   previousViewport: { key: "Backspace" },
-  previousViewpoint: { key: "[" },
-  nextViewpoint: { key: "]" },
+  forwardViewport: { key: "Backspace", shift: true },
+  previousViewpoint: { key: "ArrowLeft" },
+  nextViewpoint: { key: "ArrowRight" },
+  saveViewpoint: { key: "m" },
+  goHome: { key: "m", shift: true },
+  toggleViewpointOverview: { key: "u" },
 };
 
 const createDefaults = (): ShortcutMap => ({ ...DEFAULT_SHORTCUTS });
