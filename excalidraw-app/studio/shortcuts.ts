@@ -31,6 +31,7 @@ import type { StudioContextValue } from "./StudioContext";
  * registration boundary.
  */
 type StudioActionName =
+  | "studioPauseRecording"
   | "studioTogglePresentation"
   | "studioExitPresentation"
   | "studioZoomIn"
@@ -48,11 +49,17 @@ type StudioActionName =
   | "studioFreehandTool"
   | "studioTextTool"
   | "studioQuickUndo"
-  | "studioQuickErase";
+  | "studioQuickErase"
+  | "studioStartRecording"
+  | "studioStopRecording"
+  | "studioCancelCountdown"
+  | "studioToggleRecordingControls";
 
 type StudioAction = Merge<Action, { name: StudioActionName }>;
 
 const ACTION_NAMES: Record<StudioShortcutId, StudioActionName> = {
+  // Registered as a dedicated pan-preserving listener, not an action.
+  pauseRecording: "studioPauseRecording",
   togglePresentation: "studioTogglePresentation",
   exitPresentation: "studioExitPresentation",
   zoomIn: "studioZoomIn",
@@ -71,6 +78,10 @@ const ACTION_NAMES: Record<StudioShortcutId, StudioActionName> = {
   textTool: "studioTextTool",
   quickUndo: "studioQuickUndo",
   quickErase: "studioQuickErase",
+  startRecording: "studioStartRecording",
+  stopRecording: "studioStopRecording",
+  cancelCountdown: "studioCancelCountdown",
+  toggleRecordingControls: "studioToggleRecordingControls",
 };
 
 const noUpdate = { captureUpdate: CaptureUpdateAction.NEVER } as const;
@@ -109,9 +120,18 @@ export const registerStudioActions = (
     textTool: () => getStudio().setTool("text"),
     quickUndo: () => getStudio().quickUndo(),
     quickErase: () => getStudio().setTool("eraser"),
+    startRecording: () => getStudio().start(),
+    stopRecording: () => getStudio().stop(),
+    cancelCountdown: () => getStudio().cancelCountdown(),
+    toggleRecordingControls: () => getStudio().toggleRecordingControls(),
+    // Space is handled by a dedicated pan-preserving listener; see
+    // useRecordingShortcuts. It is intentionally not registered here.
+    pauseRecording: () => {},
   };
 
-  const actions: StudioAction[] = SHORTCUT_DEFINITIONS.map((definition) => ({
+  const actions: StudioAction[] = SHORTCUT_DEFINITIONS.filter(
+    (definition) => definition.id !== "pauseRecording",
+  ).map((definition) => ({
     name: ACTION_NAMES[definition.id],
     label: definition.label,
     trackEvent: false,
@@ -130,8 +150,8 @@ export const registerStudioActions = (
       if (!combo) {
         return false;
       }
-      const recordingActive = ["recording", "paused"].includes(
-        appJotaiStore.get(recordingStateAtom).status,
+      const recordingActive = ["recording", "paused", "countdown"].includes(
+        appJotaiStore.get(recordingStateAtom).phase,
       );
       const allowed =
         definition.scope === "global" ||

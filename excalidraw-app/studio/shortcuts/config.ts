@@ -45,6 +45,31 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
     scope: "presentation",
   },
   {
+    id: "startRecording",
+    label: "Start recording",
+    scope: "presentation",
+  },
+  {
+    id: "pauseRecording",
+    label: "Pause / resume recording",
+    scope: "recording",
+  },
+  {
+    id: "stopRecording",
+    label: "Stop recording",
+    scope: "recording",
+  },
+  {
+    id: "cancelCountdown",
+    label: "Cancel recording countdown",
+    scope: "recording",
+  },
+  {
+    id: "toggleRecordingControls",
+    label: "Toggle recording controls",
+    scope: "presentation",
+  },
+  {
     id: "fitToContent",
     label: "Fit content to viewport",
     scope: "presentation",
@@ -107,6 +132,11 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   saveViewpoint: { key: "m" },
   goHome: { key: "m", shift: true },
   toggleViewpointOverview: { key: "u" },
+  startRecording: { key: "r" },
+  pauseRecording: { key: "Space" },
+  stopRecording: { key: "r", shift: true },
+  cancelCountdown: { key: "Escape" },
+  toggleRecordingControls: { key: "o" },
 };
 
 /** Core bindings that cannot be silently taken over by a global shortcut. */
