@@ -246,6 +246,17 @@
     font-size: 12px;
   }
 
+  &__search {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-gray-40, rgba(0, 0, 0, 0.15));
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
   &__table {
     display: flex;
     flex-direction: column;
@@ -336,6 +347,12 @@
     font-size: 12px;
   }
 
+  &__warning {
+    margin: 10px 0 0;
+    color: #f08c00;
+    font-size: 12px;
+  }
+
   &__checkbox {
     display: flex;
     align-items: center;
@@ -352,7 +369,8 @@
     padding: 4px 0;
 
     select,
-    input[type="range"] {
+    input[type="range"],
+    input[type="color"] {
       padding: 5px 8px;
       border: 1px solid var(--color-gray-40, rgba(0, 0, 0, 0.15));
       border-radius: 6px;
@@ -522,6 +540,34 @@
   50% {
     opacity: 0.45;
   }
+}
+
+.studio-color-swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &--active {
+    border-color: #fff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #7d78ff;
+    outline-offset: 1px;
+  }
+}
+
+.studio-annotation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .studio-viewpoints {

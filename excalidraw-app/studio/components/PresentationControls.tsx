@@ -13,7 +13,13 @@ import {
   studioPreferencesAtom,
 } from "../atoms";
 
+import { formatCombo } from "../shortcuts/config";
+
+import { useShortcutHint } from "../shortcuts/useShortcutHint";
+
 import { ViewpointOverview } from "./ViewpointOverview";
+
+import type { StudioShortcutId } from "../shortcuts/model";
 
 import type { StudioTool } from "../tools/useStudioTools";
 
@@ -29,6 +35,22 @@ const TOOL_BUTTONS: {
   { type: "text", glyph: "T", label: "Text", shortcut: "T" },
   { type: "rectangle", glyph: "□", label: "Rectangle", shortcut: "R" },
   { type: "ellipse", glyph: "○", label: "Ellipse", shortcut: "O" },
+];
+
+const TOOL_SHORTCUTS: Partial<Record<StudioTool, StudioShortcutId>> = {
+  selection: "navigateTool",
+  arrow: "arrowTool",
+  freedraw: "freehandTool",
+  text: "textTool",
+  eraser: "quickErase",
+};
+
+const ANNOTATION_COLORS = [
+  "#1e1e1e",
+  "#e03131",
+  "#1971c2",
+  "#2f9e44",
+  "#f08c00",
 ];
 
 const IDLE_DELAY_MS = 4000;
@@ -49,6 +71,8 @@ export const PresentationControls = () => {
     () => api?.getSceneElements().length ?? 0,
   );
   const [isIdle, setIsIdle] = useState(false);
+  const [annotationOpen, setAnnotationOpen] = useState(false);
+  const exitHint = useShortcutHint("exitPresentation");
   const {
     exit,
     zoomIn,
@@ -65,6 +89,10 @@ export const PresentationControls = () => {
     viewpoints,
     activeTool,
     setTool,
+    quickUndo,
+    setAnnotationColor,
+    setTemporaryAnnotation,
+    annotation,
   } = useStudio();
 
   useEffect(
@@ -102,6 +130,13 @@ export const PresentationControls = () => {
   }
 
   const toolbarVisible = !isHidden;
+  const hint = (id?: StudioShortcutId) => {
+    if (!id) {
+      return null;
+    }
+    const combo = preferences.shortcuts[id];
+    return combo ? formatCombo(combo) : null;
+  };
 
   return (
     <div ref={wrapperRef} className="studio-presentation-ui">
@@ -157,7 +192,11 @@ export const PresentationControls = () => {
                     ? " studio-presentation-controls__button--active"
                     : ""
                 }`}
-                title={`${tool.label} (${tool.shortcut})`}
+                title={`${tool.label}${
+                  hint(TOOL_SHORTCUTS[tool.type])
+                    ? ` (${hint(TOOL_SHORTCUTS[tool.type])})`
+                    : ""
+                }`}
                 aria-label={tool.label}
                 aria-pressed={activeTool === tool.type}
                 onClick={() => setTool(tool.type)}
@@ -165,7 +204,80 @@ export const PresentationControls = () => {
                 {tool.glyph}
               </button>
             ))}
+            <button
+              type="button"
+              className={`studio-presentation-controls__button${
+                annotationOpen
+                  ? " studio-presentation-controls__button--active"
+                  : ""
+              }`}
+              title="Annotation options, undo and eraser"
+              aria-label="Annotation options"
+              aria-expanded={annotationOpen}
+              onClick={() => setAnnotationOpen((open) => !open)}
+            >
+              A+
+            </button>
           </span>
+
+          {annotationOpen && (
+            <span
+              className="studio-presentation-controls__group studio-presentation-controls__group--annotation"
+              role="group"
+              aria-label="Annotation options"
+            >
+              {ANNOTATION_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className={`studio-color-swatch${
+                    annotation.color === color
+                      ? " studio-color-swatch--active"
+                      : ""
+                  }`}
+                  style={{ backgroundColor: color }}
+                  title={`Annotation color ${color}`}
+                  aria-label={`Use annotation color ${color}`}
+                  onClick={() => setAnnotationColor(color, true)}
+                />
+              ))}
+              <button
+                type="button"
+                className="studio-presentation-controls__button"
+                title={`Undo${
+                  hint("quickUndo") ? ` (${hint("quickUndo")})` : ""
+                }`}
+                aria-label="Undo last annotation"
+                onClick={quickUndo}
+              >
+                ↺
+              </button>
+              <button
+                type="button"
+                className="studio-presentation-controls__button"
+                title={`Eraser${
+                  hint("quickErase") ? ` (${hint("quickErase")})` : ""
+                }`}
+                aria-label="Quick eraser"
+                onClick={() => setTool("eraser")}
+              >
+                ⌫
+              </button>
+              <label
+                className="studio-annotation-toggle"
+                title="Return to navigation after one annotation"
+              >
+                <input
+                  type="checkbox"
+                  checked={annotation.temporaryMode}
+                  onChange={(event) =>
+                    setTemporaryAnnotation(event.target.checked)
+                  }
+                />
+                One-shot
+              </label>
+            </span>
+          )}
 
           <span className="studio-presentation-controls__group">
             <button
@@ -292,7 +404,7 @@ export const PresentationControls = () => {
           <button
             type="button"
             className="studio-presentation-controls__button studio-presentation-controls__button--exit"
-            title="Exit Presentation Mode (P or Escape)"
+            title={`Exit Presentation Mode (${exitHint})`}
             aria-label="Exit Presentation Mode"
             onClick={exit}
           >
