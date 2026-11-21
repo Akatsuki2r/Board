@@ -6,6 +6,10 @@
  * the editor's persisted camera state.
  */
 
+import type { StrokeWidthKey } from "@excalidraw/common";
+
+import { LOCAL_BOARD_KEY } from "./board";
+
 import { DEFAULT_SHORTCUTS, validateShortcutMap } from "./shortcuts/config";
 
 import type { ShortcutMap } from "./shortcuts/model";
@@ -17,6 +21,8 @@ export interface SavedViewpoint {
   id: string;
   name: string;
   viewport: StudioViewport;
+  notes?: string;
+  isDefault?: boolean;
 }
 
 export interface StudioPreferences {
@@ -31,11 +37,24 @@ export interface StudioPreferences {
     autoHideToolbar: boolean;
     /** Show a presentation elapsed-time indicator (independent of recording). */
     showPresentationTimer: boolean;
+    /** Duration of studio-driven camera transitions, in milliseconds. */
+    transitionDurationMs: number;
+    /** Allow animated camera transitions. */
+    enableTransitions: boolean;
+    /** Skip transitions when the OS requests reduced motion. */
+    respectReducedMotion: boolean;
   };
-  /** Named camera positions, persisted locally and shared across boards. */
-  viewpoints: SavedViewpoint[];
+  /** Named camera positions, scoped by board and persisted locally. */
+  viewpointsByBoard: Record<string, SavedViewpoint[]>;
   /** Configurable keyboard shortcuts for studio actions. */
   shortcuts: ShortcutMap;
+  /** Live annotation defaults applied when entering Presentation Mode. */
+  annotation: {
+    color: string;
+    strokeWidth: StrokeWidthKey;
+    /** Return to navigation after a single drawn annotation. */
+    temporaryMode: boolean;
+  };
   /** Recording settings. Only canvas capture is currently implemented. */
   recording: {
     fps: number;
@@ -49,9 +68,17 @@ export const createDefaultStudioPreferences = (): StudioPreferences => ({
     restoreCameraOnExit: true,
     autoHideToolbar: true,
     showPresentationTimer: false,
+    transitionDurationMs: 250,
+    enableTransitions: true,
+    respectReducedMotion: true,
   },
-  viewpoints: [],
+  viewpointsByBoard: {},
   shortcuts: { ...DEFAULT_SHORTCUTS },
+  annotation: {
+    color: "#1e1e1e",
+    strokeWidth: "medium",
+    temporaryMode: false,
+  },
   recording: {
     fps: 30,
   },
@@ -59,6 +86,36 @@ export const createDefaultStudioPreferences = (): StudioPreferences => ({
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isSavedViewpoint = (item: unknown): item is SavedViewpoint =>
+  isRecord(item) &&
+  typeof item.id === "string" &&
+  typeof item.name === "string" &&
+  isRecord(item.viewport) &&
+  typeof item.viewport.scrollX === "number" &&
+  typeof item.viewport.scrollY === "number" &&
+  isRecord(item.viewport.zoom) &&
+  typeof item.viewport.zoom.value === "number" &&
+  (item.notes === undefined || typeof item.notes === "string") &&
+  (item.isDefault === undefined || typeof item.isDefault === "boolean");
+
+const parseViewpointGroups = (
+  parsed: Record<string, unknown>,
+): Record<string, SavedViewpoint[]> => {
+  const groups: Record<string, SavedViewpoint[]> = {};
+  // Migrate the pre-board-scoping storage shape.
+  if (Array.isArray(parsed.viewpoints)) {
+    groups[LOCAL_BOARD_KEY] = parsed.viewpoints.filter(isSavedViewpoint);
+  }
+  if (isRecord(parsed.viewpointsByBoard)) {
+    for (const [boardKey, value] of Object.entries(parsed.viewpointsByBoard)) {
+      if (Array.isArray(value)) {
+        groups[boardKey] = value.filter(isSavedViewpoint);
+      }
+    }
+  }
+  return groups;
+};
 
 export const loadStudioPreferences = (): StudioPreferences => {
   const defaults = createDefaultStudioPreferences();
@@ -100,21 +157,43 @@ export const loadStudioPreferences = (): StudioPreferences => {
           typeof presentation.showPresentationTimer === "boolean"
             ? presentation.showPresentationTimer
             : defaults.presentation.showPresentationTimer,
+        transitionDurationMs:
+          typeof presentation.transitionDurationMs === "number" &&
+          presentation.transitionDurationMs >= 0 &&
+          presentation.transitionDurationMs <= 2000
+            ? presentation.transitionDurationMs
+            : defaults.presentation.transitionDurationMs,
+        enableTransitions:
+          typeof presentation.enableTransitions === "boolean"
+            ? presentation.enableTransitions
+            : defaults.presentation.enableTransitions,
+        respectReducedMotion:
+          typeof presentation.respectReducedMotion === "boolean"
+            ? presentation.respectReducedMotion
+            : defaults.presentation.respectReducedMotion,
       },
-      viewpoints: Array.isArray(parsed.viewpoints)
-        ? parsed.viewpoints.filter(
-            (item): item is SavedViewpoint =>
-              isRecord(item) &&
-              typeof item.id === "string" &&
-              typeof item.name === "string" &&
-              isRecord(item.viewport) &&
-              typeof item.viewport.scrollX === "number" &&
-              typeof item.viewport.scrollY === "number" &&
-              isRecord(item.viewport.zoom) &&
-              typeof item.viewport.zoom.value === "number",
-          )
-        : [],
+      viewpointsByBoard: parseViewpointGroups(parsed),
       shortcuts: validateShortcutMap(parsed.shortcuts),
+      annotation: {
+        color:
+          isRecord(parsed.annotation) &&
+          typeof parsed.annotation.color === "string" &&
+          /^#[0-9a-fA-F]{6}$/.test(parsed.annotation.color)
+            ? parsed.annotation.color
+            : defaults.annotation.color,
+        strokeWidth:
+          isRecord(parsed.annotation) &&
+          (parsed.annotation.strokeWidth === "thin" ||
+            parsed.annotation.strokeWidth === "medium" ||
+            parsed.annotation.strokeWidth === "bold")
+            ? parsed.annotation.strokeWidth
+            : defaults.annotation.strokeWidth,
+        temporaryMode:
+          isRecord(parsed.annotation) &&
+          typeof parsed.annotation.temporaryMode === "boolean"
+            ? parsed.annotation.temporaryMode
+            : defaults.annotation.temporaryMode,
+      },
       recording: {
         fps:
           isRecord(parsed.recording) &&

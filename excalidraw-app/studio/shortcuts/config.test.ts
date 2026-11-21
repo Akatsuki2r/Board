@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   comboFromKeyboardEvent,
   comboMatchesEvent,
+  findCoreShortcutConflict,
   DEFAULT_SHORTCUTS,
   findShortcutConflict,
   formatCombo,
@@ -90,9 +91,50 @@ describe("studio shortcut config", () => {
     ).toBe("zoomIn");
     expect(
       findShortcutConflict(DEFAULT_SHORTCUTS, "togglePresentation", {
-        key: "m",
+        key: "y",
       }),
     ).toBeNull();
+  });
+
+  it("uses the approved navigation and recording-safe defaults", () => {
+    expect(DEFAULT_SHORTCUTS.previousViewpoint).toMatchObject({
+      key: "ArrowLeft",
+    });
+    expect(DEFAULT_SHORTCUTS.nextViewpoint).toMatchObject({
+      key: "ArrowRight",
+    });
+    expect(DEFAULT_SHORTCUTS.saveViewpoint).toMatchObject({ key: "m" });
+    expect(DEFAULT_SHORTCUTS.quickUndo).toMatchObject({ key: "z" });
+    expect(DEFAULT_SHORTCUTS.quickErase).toMatchObject({ key: "e" });
+    expect(DEFAULT_SHORTCUTS.forwardViewport).toMatchObject({
+      key: "Backspace",
+      shift: true,
+    });
+    expect(
+      comboMatchesEvent(
+        DEFAULT_SHORTCUTS.previousViewpoint as KeyCombo,
+        keyEvent("ArrowLeft", "ArrowLeft"),
+      ),
+    ).toBe(true);
+  });
+
+  it("detects conflicts with core Excalidraw and browser shortcuts", () => {
+    expect(findCoreShortcutConflict({ key: "s", ctrl: true })).toContain(
+      "Save",
+    );
+    expect(
+      findCoreShortcutConflict({ key: "z", ctrl: true, shift: true }),
+    ).toContain("Redo");
+    expect(findCoreShortcutConflict({ key: "j" })).toBeNull();
+  });
+
+  it("drops duplicate assignments from persisted maps", () => {
+    const parsed = validateShortcutMap({
+      ...DEFAULT_SHORTCUTS,
+      freehandTool: { key: "j" },
+    });
+    expect(parsed.zoomIn).toMatchObject({ key: "j" });
+    expect(parsed.freehandTool).toBeUndefined();
   });
 
   it("validates persisted shortcut maps and preserves disabled actions", () => {

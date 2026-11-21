@@ -34,6 +34,17 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
   },
   { id: "textTool", label: "Text annotation", scope: "presentation" },
   {
+    id: "quickUndo",
+    label: "Undo last annotation",
+    scope: "presentation",
+    description: "Uses Excalidraw's existing undo stack.",
+  },
+  {
+    id: "quickErase",
+    label: "Quick eraser",
+    scope: "presentation",
+  },
+  {
     id: "fitToContent",
     label: "Fit content to viewport",
     scope: "presentation",
@@ -44,13 +55,35 @@ export const SHORTCUT_DEFINITIONS: readonly ShortcutDefinition[] = [
     scope: "presentation",
   },
   {
+    id: "forwardViewport",
+    label: "Return to next viewpoint",
+    scope: "presentation",
+  },
+  {
     id: "previousViewpoint",
     label: "Previous saved viewpoint",
     scope: "presentation",
+    description: "Yields to element nudging when something is selected.",
   },
   {
     id: "nextViewpoint",
     label: "Next saved viewpoint",
+    scope: "presentation",
+    description: "Yields to element nudging when something is selected.",
+  },
+  {
+    id: "saveViewpoint",
+    label: "Save current viewpoint",
+    scope: "presentation",
+  },
+  {
+    id: "goHome",
+    label: "Go to default view / home viewpoint",
+    scope: "presentation",
+  },
+  {
+    id: "toggleViewpointOverview",
+    label: "Toggle viewpoint overview",
     scope: "presentation",
   },
 ];
@@ -64,11 +97,47 @@ export const DEFAULT_SHORTCUTS: ShortcutMap = {
   arrowTool: { key: "a" },
   freehandTool: { key: "d" },
   textTool: { key: "t" },
+  quickUndo: { key: "z" },
+  quickErase: { key: "e" },
   fitToContent: { key: "f" },
   previousViewport: { key: "Backspace" },
-  previousViewpoint: { key: "[" },
-  nextViewpoint: { key: "]" },
+  forwardViewport: { key: "Backspace", shift: true },
+  previousViewpoint: { key: "ArrowLeft" },
+  nextViewpoint: { key: "ArrowRight" },
+  saveViewpoint: { key: "m" },
+  goHome: { key: "m", shift: true },
+  toggleViewpointOverview: { key: "u" },
 };
+
+/** Core bindings that cannot be silently taken over by a global shortcut. */
+const CORE_SHORTCUT_CONFLICTS: { combo: KeyCombo; description: string }[] = [
+  { combo: { key: "s", ctrl: true }, description: "Excalidraw: Save to file" },
+  {
+    combo: { key: "s", ctrl: true, shift: true },
+    description: "Excalidraw / browser: Save as",
+  },
+  { combo: { key: "z", ctrl: true }, description: "Excalidraw: Undo" },
+  {
+    combo: { key: "z", ctrl: true, shift: true },
+    description: "Excalidraw: Redo",
+  },
+  { combo: { key: "y", ctrl: true }, description: "Excalidraw: Redo" },
+  {
+    combo: { key: "Backspace" },
+    description: "Excalidraw: Delete selection",
+  },
+  { combo: { key: "Delete" }, description: "Excalidraw: Delete selection" },
+  { combo: { key: "Space" }, description: "Excalidraw: Pan canvas" },
+  { combo: { key: "p", ctrl: true }, description: "Browser: Print" },
+  {
+    combo: { key: "/", ctrl: true },
+    description: "Excalidraw: Command palette",
+  },
+];
+
+export const findCoreShortcutConflict = (combo: KeyCombo): string | null =>
+  CORE_SHORTCUT_CONFLICTS.find((entry) => combosEqual(entry.combo, combo))
+    ?.description ?? null;
 
 const createDefaults = (): ShortcutMap => ({ ...DEFAULT_SHORTCUTS });
 
@@ -220,6 +289,22 @@ export const validateShortcutMap = (value: unknown): ShortcutMap => {
       shift: candidate.shift === true,
       meta: candidate.meta === true,
     };
+  }
+
+  // A hand-edited or older storage payload could contain duplicates; keep the
+  // first assignment so the action manager never cancels both actions.
+  const seen = new Set<string>();
+  for (const definition of SHORTCUT_DEFINITIONS) {
+    const combo = result[definition.id];
+    if (!combo) {
+      continue;
+    }
+    const signature = canonical(combo);
+    if (seen.has(signature)) {
+      delete result[definition.id];
+    } else {
+      seen.add(signature);
+    }
   }
   return result;
 };

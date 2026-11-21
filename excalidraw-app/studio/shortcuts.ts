@@ -12,6 +12,7 @@ import { appJotaiStore } from "../app-jotai";
 
 import {
   isPresentationModeAtom,
+  recordingStateAtom,
   studioPreferencesAtom,
   studioSettingsOpenAtom,
 } from "./atoms";
@@ -36,12 +37,18 @@ type StudioActionName =
   | "studioZoomOut"
   | "studioFitToContent"
   | "studioPreviousViewport"
+  | "studioForwardViewport"
   | "studioPreviousViewpoint"
   | "studioNextViewpoint"
+  | "studioSaveViewpoint"
+  | "studioGoHome"
+  | "studioToggleViewpointOverview"
   | "studioNavigateTool"
   | "studioArrowTool"
   | "studioFreehandTool"
-  | "studioTextTool";
+  | "studioTextTool"
+  | "studioQuickUndo"
+  | "studioQuickErase";
 
 type StudioAction = Merge<Action, { name: StudioActionName }>;
 
@@ -52,12 +59,18 @@ const ACTION_NAMES: Record<StudioShortcutId, StudioActionName> = {
   zoomOut: "studioZoomOut",
   fitToContent: "studioFitToContent",
   previousViewport: "studioPreviousViewport",
+  forwardViewport: "studioForwardViewport",
   previousViewpoint: "studioPreviousViewpoint",
   nextViewpoint: "studioNextViewpoint",
+  saveViewpoint: "studioSaveViewpoint",
+  goHome: "studioGoHome",
+  toggleViewpointOverview: "studioToggleViewpointOverview",
   navigateTool: "studioNavigateTool",
   arrowTool: "studioArrowTool",
   freehandTool: "studioFreehandTool",
   textTool: "studioTextTool",
+  quickUndo: "studioQuickUndo",
+  quickErase: "studioQuickErase",
 };
 
 const noUpdate = { captureUpdate: CaptureUpdateAction.NEVER } as const;
@@ -84,12 +97,18 @@ export const registerStudioActions = (
     zoomOut: () => getStudio().zoomOut(),
     fitToContent: () => getStudio().fitToContent(),
     previousViewport: () => getStudio().goBack(),
+    forwardViewport: () => getStudio().goForward(),
     previousViewpoint: () => getStudio().goToAdjacentViewpoint(-1),
     nextViewpoint: () => getStudio().goToAdjacentViewpoint(1),
+    saveViewpoint: () => getStudio().saveViewpoint(),
+    goHome: () => getStudio().resetView(),
+    toggleViewpointOverview: () => getStudio().toggleViewpointOverview(),
     navigateTool: () => getStudio().returnToNavigation(),
     arrowTool: () => getStudio().setTool("arrow"),
     freehandTool: () => getStudio().setTool("freedraw"),
     textTool: () => getStudio().setTool("text"),
+    quickUndo: () => getStudio().quickUndo(),
+    quickErase: () => getStudio().setTool("eraser"),
   };
 
   const actions: StudioAction[] = SHORTCUT_DEFINITIONS.map((definition) => ({
@@ -111,7 +130,23 @@ export const registerStudioActions = (
       if (!combo) {
         return false;
       }
-      if (definition.scope === "presentation" && !isPresenting()) {
+      const recordingActive = ["recording", "paused"].includes(
+        appJotaiStore.get(recordingStateAtom).status,
+      );
+      const allowed =
+        definition.scope === "global" ||
+        (definition.scope === "presentation" && isPresenting()) ||
+        (definition.scope === "recording" && recordingActive) ||
+        (definition.scope === "editing" && !isPresenting());
+      if (!allowed) {
+        return false;
+      }
+      // Arrow keys remain element-nudge shortcuts when a selection exists.
+      if (
+        (definition.id === "previousViewpoint" ||
+          definition.id === "nextViewpoint") &&
+        Object.keys(appState.selectedElementIds ?? {}).length > 0
+      ) {
         return false;
       }
       // Escape first exits the active canvas layer (linear editor / in-progress

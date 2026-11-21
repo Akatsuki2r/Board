@@ -6,6 +6,7 @@ import { studioPreferencesAtom, studioSettingsOpenAtom } from "../atoms";
 import {
   comboFromKeyboardEvent,
   DEFAULT_SHORTCUTS,
+  findCoreShortcutConflict,
   findShortcutConflict,
   formatCombo,
   SHORTCUT_DEFINITIONS,
@@ -67,6 +68,8 @@ export const StudioSettingsDialog = () => {
   const [preferences, setPreferences] = useAtom(studioPreferencesAtom);
   const [listeningId, setListeningId] = useState<StudioShortcutId | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [coreWarning, setCoreWarning] = useState<string | null>(null);
+  const [shortcutQuery, setShortcutQuery] = useState("");
 
   if (!isOpen) {
     return null;
@@ -78,7 +81,18 @@ export const StudioSettingsDialog = () => {
       setError(`Already assigned to “${conflict.label}”. Choose another key.`);
       return;
     }
+    const definition = SHORTCUT_DEFINITIONS.find((item) => item.id === id);
+    const core = findCoreShortcutConflict(combo);
+    if (core && definition?.scope === "global") {
+      setError(`Conflicts with ${core}. Choose another key.`);
+      return;
+    }
     setError(null);
+    setCoreWarning(
+      core
+        ? `${core}. This override is active only in its declared context.`
+        : null,
+    );
     setPreferences({
       ...preferences,
       shortcuts: { ...preferences.shortcuts, [id]: combo },
@@ -86,8 +100,22 @@ export const StudioSettingsDialog = () => {
     setListeningId(null);
   };
 
+  const resetShortcut = (id: StudioShortcutId) => {
+    setError(null);
+    setCoreWarning(null);
+    setListeningId(null);
+    setPreferences({
+      ...preferences,
+      shortcuts: {
+        ...preferences.shortcuts,
+        [id]: DEFAULT_SHORTCUTS[id] ?? null,
+      },
+    });
+  };
+
   const clear = (id: StudioShortcutId) => {
     setError(null);
+    setCoreWarning(null);
     setListeningId(null);
     setPreferences({
       ...preferences,
@@ -97,6 +125,7 @@ export const StudioSettingsDialog = () => {
 
   const resetShortcuts = () => {
     setError(null);
+    setCoreWarning(null);
     setListeningId(null);
     setPreferences({
       ...preferences,
@@ -104,12 +133,25 @@ export const StudioSettingsDialog = () => {
     });
   };
 
+  const matchingDefinitions = SHORTCUT_DEFINITIONS.filter((definition) =>
+    `${definition.label} ${definition.id}`
+      .toLowerCase()
+      .includes(shortcutQuery.toLowerCase()),
+  );
+
   const updatePresentation = (
     patch: Partial<typeof preferences.presentation>,
   ) => {
     setPreferences({
       ...preferences,
       presentation: { ...preferences.presentation, ...patch },
+    });
+  };
+
+  const updateAnnotation = (patch: Partial<typeof preferences.annotation>) => {
+    setPreferences({
+      ...preferences,
+      annotation: { ...preferences.annotation, ...patch },
     });
   };
 
@@ -149,8 +191,17 @@ export const StudioSettingsDialog = () => {
             P binding (X still selects Freedraw).
           </p>
 
+          <input
+            type="search"
+            className="studio-settings__search"
+            placeholder="Search shortcuts…"
+            aria-label="Search shortcuts"
+            value={shortcutQuery}
+            onChange={(event) => setShortcutQuery(event.target.value)}
+          />
+
           <div className="studio-settings__table" role="table">
-            {SHORTCUT_DEFINITIONS.map((definition) => {
+            {matchingDefinitions.map((definition) => {
               const combo = preferences.shortcuts[definition.id];
               const listening = listeningId === definition.id;
               return (
@@ -195,12 +246,23 @@ export const StudioSettingsDialog = () => {
                         Clear
                       </button>
                     )}
+                    <button
+                      type="button"
+                      className="studio-settings__text-button"
+                      title="Reset this shortcut to its default"
+                      onClick={() => resetShortcut(definition.id)}
+                    >
+                      Reset
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
           {error && <p className="studio-settings__error">{error}</p>}
+          {coreWarning && (
+            <p className="studio-settings__warning">{coreWarning}</p>
+          )}
         </section>
 
         <section className="studio-settings__section">
@@ -258,6 +320,89 @@ export const StudioSettingsDialog = () => {
               }
             />
             Show a presentation timer (separate from recording time)
+          </label>
+          <label className="studio-settings__checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.presentation.enableTransitions}
+              onChange={(event) =>
+                updatePresentation({ enableTransitions: event.target.checked })
+              }
+            />
+            Animate camera transitions between viewpoints
+          </label>
+          <label className="studio-settings__checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.presentation.respectReducedMotion}
+              onChange={(event) =>
+                updatePresentation({
+                  respectReducedMotion: event.target.checked,
+                })
+              }
+            />
+            Respect the system “reduced motion” setting
+          </label>
+          <label className="studio-settings__select-row">
+            <span>Transition duration</span>
+            <span className="studio-settings__range">
+              <input
+                type="range"
+                min={0}
+                max={1000}
+                step={50}
+                value={preferences.presentation.transitionDurationMs}
+                onChange={(event) =>
+                  updatePresentation({
+                    transitionDurationMs: Number(event.target.value),
+                  })
+                }
+              />
+              {preferences.presentation.transitionDurationMs} ms
+            </span>
+          </label>
+        </section>
+
+        <section className="studio-settings__section">
+          <h2>Live annotation</h2>
+          <p className="studio-settings__note">
+            These defaults are applied when entering Presentation Mode and
+            restored when you return to editing.
+          </p>
+          <label className="studio-settings__select-row">
+            <span>Default annotation color</span>
+            <input
+              type="color"
+              value={preferences.annotation.color}
+              onChange={(event) =>
+                updateAnnotation({ color: event.target.value })
+              }
+            />
+          </label>
+          <label className="studio-settings__select-row">
+            <span>Default stroke width</span>
+            <select
+              value={preferences.annotation.strokeWidth}
+              onChange={(event) =>
+                updateAnnotation({
+                  strokeWidth: event.target.value as "thin" | "medium" | "bold",
+                })
+              }
+            >
+              <option value="thin">Thin</option>
+              <option value="medium">Medium</option>
+              <option value="bold">Bold</option>
+            </select>
+          </label>
+          <label className="studio-settings__checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.annotation.temporaryMode}
+              onChange={(event) =>
+                updateAnnotation({ temporaryMode: event.target.checked })
+              }
+            />
+            One-shot annotation (return to navigation after each drawing)
           </label>
         </section>
 

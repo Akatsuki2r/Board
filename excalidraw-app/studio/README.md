@@ -8,7 +8,7 @@ A thin layer around Excalidraw that turns the app into a presentation studio. No
 | --- | --- |
 | `usePresentationMode.ts` | Mode switching, fullscreen, pre-presentation camera/tool restoration |
 | `viewport.ts` | Camera capture/restore (`{ scrollX, scrollY, zoom }`) |
-| `navigation/` | Zoom, fit-to-content, back stack, saved viewpoints |
+| `navigation/` | Zoom, fit, back/forward history, saved viewpoints, sequence, camera transitions |
 | `tools/` | Thin wrapper over Excalidraw's `setActiveTool` |
 | `shortcuts/` | Configurable combos, defaults, conflict detection, action registration |
 | `recording/` | `CaptureSource` abstraction, canvas compositing, MediaRecorder engine |
@@ -26,11 +26,19 @@ A thin layer around Excalidraw that turns the app into a presentation studio. No
 
 ## Defaults
 
-`P` toggles Presentation Mode globally (intentionally replacing Freedraw's `P`; `X` still selects Freedraw). While presenting: `J`/`K` zoom, `F` fits content, `V`/`A`/`D`/`T` switch tools (`D` = freehand, not diamond), `Backspace` returns to the previous camera, `[`/`]` move between saved viewpoints, and `Escape` exits. All bindings are editable in **Menu → Presentation Studio settings…**.
+`P` toggles Presentation Mode globally (intentionally replacing Freedraw's `P`; `X` still selects Freedraw). While presenting: `J`/`K` zoom, `F` fits content, `V`/`A`/`D`/`T` switch tools (`D` = freehand, not diamond), `Backspace`/`Shift+Backspace` walk camera history, `←`/`→` move between viewpoints (`[`/`]` remain aliases), `M` saves a viewpoint, `Shift+M` goes home, `U` opens the overview, `Z` undoes, `E` erases, and `Escape` exits. All bindings are editable in **Menu → Presentation Studio settings…**.
+
+## Presentation sequence
+
+Viewpoints are scoped by board (URL hash when present, otherwise the local board), ordered as a lightweight sequence and editable in the in-presentation overview (`U`). Each viewpoint can be renamed, annotated, reordered, marked as the default view and deleted with confirmation. `←`/`→` move through the sequence, `M` saves the current camera, `Shift+M` goes home/resets, and `Backspace`/`Shift+Backspace` walk the deliberate-camera history. Transitions use Excalidraw's own animation for fit-to-content and a cancelable, reduced-motion-aware interpolator for viewpoint jumps; all of this is configurable in Settings.
+
+## Annotation and shortcuts
+
+The toolbar's `A+` group exposes a quick color selector, undo and eraser without leaving Presentation Mode. `Z` undoes through Excalidraw's own history (no second undo stack), `E` toggles the eraser, and the optional one-shot mode returns to navigation after a single annotation. Default annotation color and stroke width are applied on entry and restored on exit; a color chosen while presenting becomes the new default. All bindings are searchable in Settings, support per-action reset, and are checked against both studio and known core/browser conflicts (global bindings that collide are rejected).
 
 ## Tests
 
-`shortcuts/config.test.ts`, `registration.test.ts` and `recording/RecordingEngine.test.ts` cover case-insensitive multi-word matching, exact modifiers, conflict detection, scope/typing guards, stable action dispatch, and the recording lifecycle with mocked browser APIs. Run with `yarn test:app excalidraw-app/studio --watch=false`.
+Ten test files cover key matching/conflicts, scope guards, the recording lifecycle, back/forward history, cancelable transitions, viewpoint CRUD/persistence, board scoping, preference validation, quick undo dispatch and the annotation tools hook. Run with `yarn test:studio` (or the full `yarn verify:studio` pipeline).
 
 ## Known limitations
 

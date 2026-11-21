@@ -1,15 +1,29 @@
 import { atom } from "../app-jotai";
 
-import { loadStudioPreferences, saveStudioPreferences } from "./preferences";
+import {
+  createNavigationHistory,
+  type NavigationHistory,
+} from "./navigation/history";
+import {
+  loadStudioPreferences,
+  saveStudioPreferences,
+  type StudioPreferences,
+} from "./preferences";
 
-import type { StudioViewport } from "./viewport";
+export type PreferencesUpdate =
+  | StudioPreferences
+  | ((previous: StudioPreferences) => StudioPreferences);
 
 export const isPresentationModeAtom = atom(false);
 
-/** In-session back stack of discrete camera moves (not continuous panning). */
-export const viewportHistoryAtom = atom<StudioViewport[]>([]);
+/** In-session back/forward stacks of deliberate camera moves. */
+export const viewportHistoryAtom = atom<NavigationHistory>(
+  createNavigationHistory(),
+);
 
 export const activeViewpointIdAtom = atom<string | null>(null);
+
+export const viewpointOverviewOpenAtom = atom(false);
 
 export const studioSettingsOpenAtom = atom(false);
 
@@ -46,7 +60,11 @@ export const isPresentationToolbarHiddenAtom = atom(false);
 
 export const studioPreferencesAtom = atom(
   loadStudioPreferences(),
-  (_get, set, preferences: Parameters<typeof saveStudioPreferences>[0]) => {
+  (get, set, update: PreferencesUpdate) => {
+    const preferences =
+      typeof update === "function"
+        ? update(get(studioPreferencesAtom))
+        : update;
     set(studioPreferencesAtom, preferences);
     saveStudioPreferences(preferences);
   },

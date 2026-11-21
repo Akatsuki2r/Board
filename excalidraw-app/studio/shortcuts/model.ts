@@ -7,7 +7,8 @@ export interface KeyCombo {
   meta?: boolean;
 }
 
-export type ShortcutScope = "global" | "presentation";
+/** Context in which a shortcut is allowed to dispatch. */
+export type ShortcutScope = "global" | "editing" | "presentation" | "recording";
 
 export type StudioShortcutId =
   | "togglePresentation"
@@ -16,12 +17,18 @@ export type StudioShortcutId =
   | "zoomOut"
   | "fitToContent"
   | "previousViewport"
+  | "forwardViewport"
   | "previousViewpoint"
   | "nextViewpoint"
+  | "saveViewpoint"
+  | "goHome"
+  | "toggleViewpointOverview"
   | "navigateTool"
   | "arrowTool"
   | "freehandTool"
-  | "textTool";
+  | "textTool"
+  | "quickUndo"
+  | "quickErase";
 
 /** `null` means the action has no shortcut assigned. */
 export type ShortcutMap = Partial<Record<StudioShortcutId, KeyCombo | null>>;
