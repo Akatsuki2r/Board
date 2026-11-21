@@ -400,7 +400,7 @@ const ExcalidrawWrapper = () => {
   const appRootRef = useRef<HTMLDivElement>(null);
   const presentation = usePresentationMode({ excalidrawAPI, appRootRef });
   const navigation = useStudioNavigation(excalidrawAPI, appRootRef);
-  const tools = useStudioTools(excalidrawAPI);
+  const tools = useStudioTools(excalidrawAPI, appRootRef);
   const recording = useStudioRecording(appRootRef);
   const studio = useMemo(
     () => ({ ...presentation, ...navigation, ...tools, ...recording }),

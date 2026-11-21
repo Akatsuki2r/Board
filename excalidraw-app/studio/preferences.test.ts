@@ -64,6 +64,32 @@ describe("studio preferences", () => {
     expect(loaded.viewpointsByBoard["local-board"]).toEqual([]);
   });
 
+  it("validates and round-trips annotation defaults", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        annotation: {
+          color: "not-a-color",
+          strokeWidth: "huge",
+          temporaryMode: true,
+        },
+      }),
+    );
+    const loaded = loadStudioPreferences();
+    expect(loaded.annotation.color).toBe("#1e1e1e");
+    expect(loaded.annotation.strokeWidth).toBe("medium");
+    expect(loaded.annotation.temporaryMode).toBe(true);
+
+    const preferences = createDefaultStudioPreferences();
+    preferences.annotation = {
+      color: "#e03131",
+      strokeWidth: "bold",
+      temporaryMode: true,
+    };
+    saveStudioPreferences(preferences);
+    expect(loadStudioPreferences().annotation).toEqual(preferences.annotation);
+  });
+
   it("round-trips valid transition settings", () => {
     const preferences = createDefaultStudioPreferences();
     preferences.presentation.transitionDurationMs = 500;

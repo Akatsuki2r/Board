@@ -38,6 +38,10 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
 
   const cameraBeforePresentation = useRef<StudioViewport | null>(null);
   const toolBeforePresentation = useRef<AppState["activeTool"] | null>(null);
+  const strokeBeforePresentation = useRef<{
+    color: string;
+    width: AppState["currentItemStrokeWidthKey"];
+  } | null>(null);
   const enteredFullscreen = useRef(false);
 
   const enter = useCallback(() => {
@@ -48,6 +52,10 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
     const appState = excalidrawAPI.getAppState();
     cameraBeforePresentation.current = captureViewport(excalidrawAPI);
     toolBeforePresentation.current = appState.activeTool;
+    strokeBeforePresentation.current = {
+      color: appState.currentItemStrokeColor,
+      width: appState.currentItemStrokeWidthKey,
+    };
 
     setToolbarHidden(!preferences.presentation.showToolbar);
     setIsPresenting(true);
@@ -58,6 +66,12 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
     // Start from a neutral tool so navigation works immediately. Annotations
     // switch tools on demand without leaving Presentation Mode.
     excalidrawAPI.setActiveTool({ type: "selection" });
+    excalidrawAPI.updateScene({
+      appState: {
+        currentItemStrokeColor: preferences.annotation.color,
+        currentItemStrokeWidthKey: preferences.annotation.strokeWidth,
+      },
+    });
 
     if (preferences.presentation.enterFullscreen) {
       const root = appRootRef.current;
@@ -79,6 +93,8 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
     isPresenting,
     preferences.presentation.enterFullscreen,
     preferences.presentation.showToolbar,
+    preferences.annotation.color,
+    preferences.annotation.strokeWidth,
     setPresentationStartedAt,
     setToolbarHidden,
     setIsPresenting,
@@ -97,6 +113,15 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
     const previousTool = toolBeforePresentation.current;
     if (previousTool) {
       excalidrawAPI?.setActiveTool(previousTool);
+    }
+    const previousStroke = strokeBeforePresentation.current;
+    if (previousStroke && excalidrawAPI) {
+      excalidrawAPI.updateScene({
+        appState: {
+          currentItemStrokeColor: previousStroke.color,
+          currentItemStrokeWidthKey: previousStroke.width,
+        },
+      });
     }
 
     const previousCamera = cameraBeforePresentation.current;

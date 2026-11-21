@@ -6,7 +6,10 @@
  * the editor's persisted camera state.
  */
 
+import type { StrokeWidthKey } from "@excalidraw/common";
+
 import { LOCAL_BOARD_KEY } from "./board";
+
 import { DEFAULT_SHORTCUTS, validateShortcutMap } from "./shortcuts/config";
 
 import type { ShortcutMap } from "./shortcuts/model";
@@ -45,6 +48,13 @@ export interface StudioPreferences {
   viewpointsByBoard: Record<string, SavedViewpoint[]>;
   /** Configurable keyboard shortcuts for studio actions. */
   shortcuts: ShortcutMap;
+  /** Live annotation defaults applied when entering Presentation Mode. */
+  annotation: {
+    color: string;
+    strokeWidth: StrokeWidthKey;
+    /** Return to navigation after a single drawn annotation. */
+    temporaryMode: boolean;
+  };
   /** Recording settings. Only canvas capture is currently implemented. */
   recording: {
     fps: number;
@@ -64,6 +74,11 @@ export const createDefaultStudioPreferences = (): StudioPreferences => ({
   },
   viewpointsByBoard: {},
   shortcuts: { ...DEFAULT_SHORTCUTS },
+  annotation: {
+    color: "#1e1e1e",
+    strokeWidth: "medium",
+    temporaryMode: false,
+  },
   recording: {
     fps: 30,
   },
@@ -159,6 +174,26 @@ export const loadStudioPreferences = (): StudioPreferences => {
       },
       viewpointsByBoard: parseViewpointGroups(parsed),
       shortcuts: validateShortcutMap(parsed.shortcuts),
+      annotation: {
+        color:
+          isRecord(parsed.annotation) &&
+          typeof parsed.annotation.color === "string" &&
+          /^#[0-9a-fA-F]{6}$/.test(parsed.annotation.color)
+            ? parsed.annotation.color
+            : defaults.annotation.color,
+        strokeWidth:
+          isRecord(parsed.annotation) &&
+          (parsed.annotation.strokeWidth === "thin" ||
+            parsed.annotation.strokeWidth === "medium" ||
+            parsed.annotation.strokeWidth === "bold")
+            ? parsed.annotation.strokeWidth
+            : defaults.annotation.strokeWidth,
+        temporaryMode:
+          isRecord(parsed.annotation) &&
+          typeof parsed.annotation.temporaryMode === "boolean"
+            ? parsed.annotation.temporaryMode
+            : defaults.annotation.temporaryMode,
+      },
       recording: {
         fps:
           isRecord(parsed.recording) &&
