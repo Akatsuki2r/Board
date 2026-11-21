@@ -13,6 +13,8 @@ import {
   studioPreferencesAtom,
 } from "../atoms";
 
+import { ViewpointOverview } from "./ViewpointOverview";
+
 import type { StudioTool } from "../tools/useStudioTools";
 
 const TOOL_BUTTONS: {
@@ -53,8 +55,12 @@ export const PresentationControls = () => {
     zoomOut,
     fitToContent,
     goBack,
+    goForward,
     canGoBack,
+    canGoForward,
     saveViewpoint,
+    resetView,
+    toggleViewpointOverview,
     goToAdjacentViewpoint,
     viewpoints,
     activeTool,
@@ -99,6 +105,7 @@ export const PresentationControls = () => {
 
   return (
     <div ref={wrapperRef} className="studio-presentation-ui">
+      <ViewpointOverview />
       {elementCount === 0 && (
         <div className="studio-presentation-empty" role="status">
           <strong>Empty board</strong>
@@ -201,6 +208,25 @@ export const PresentationControls = () => {
             >
               ↶
             </button>
+            <button
+              type="button"
+              className="studio-presentation-controls__button"
+              title="Return to next viewport (Shift+Backspace)"
+              aria-label="Return to next viewport"
+              disabled={!canGoForward}
+              onClick={goForward}
+            >
+              ↷
+            </button>
+            <button
+              type="button"
+              className="studio-presentation-controls__button"
+              title="Reset view / go home (Shift+M)"
+              aria-label="Reset view or go home"
+              onClick={resetView}
+            >
+              ⌂
+            </button>
           </span>
 
           <span className="studio-presentation-controls__group">
@@ -211,7 +237,16 @@ export const PresentationControls = () => {
               aria-label="Save current viewpoint"
               onClick={() => saveViewpoint()}
             >
-              ★
+              +
+            </button>
+            <button
+              type="button"
+              className="studio-presentation-controls__button"
+              title="Viewpoint overview (U)"
+              aria-label="Toggle viewpoint overview"
+              onClick={toggleViewpointOverview}
+            >
+              ☰
             </button>
             <button
               type="button"

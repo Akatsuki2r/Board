@@ -259,6 +259,46 @@ export const StudioSettingsDialog = () => {
             />
             Show a presentation timer (separate from recording time)
           </label>
+          <label className="studio-settings__checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.presentation.enableTransitions}
+              onChange={(event) =>
+                updatePresentation({ enableTransitions: event.target.checked })
+              }
+            />
+            Animate camera transitions between viewpoints
+          </label>
+          <label className="studio-settings__checkbox">
+            <input
+              type="checkbox"
+              checked={preferences.presentation.respectReducedMotion}
+              onChange={(event) =>
+                updatePresentation({
+                  respectReducedMotion: event.target.checked,
+                })
+              }
+            />
+            Respect the system “reduced motion” setting
+          </label>
+          <label className="studio-settings__select-row">
+            <span>Transition duration</span>
+            <span className="studio-settings__range">
+              <input
+                type="range"
+                min={0}
+                max={1000}
+                step={50}
+                value={preferences.presentation.transitionDurationMs}
+                onChange={(event) =>
+                  updatePresentation({
+                    transitionDurationMs: Number(event.target.value),
+                  })
+                }
+              />
+              {preferences.presentation.transitionDurationMs} ms
+            </span>
+          </label>
         </section>
 
         <section className="studio-settings__section">
