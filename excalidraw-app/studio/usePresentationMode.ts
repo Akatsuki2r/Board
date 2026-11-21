@@ -5,12 +5,13 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
 
-import { useAtom, useSetAtom } from "../app-jotai";
+import { useAtom, useAtomValue, useSetAtom } from "../app-jotai";
 
 import {
   isPresentationModeAtom,
   isPresentationToolbarHiddenAtom,
   presentationStartedAtAtom,
+  recordingStateAtom,
   studioPreferencesAtom,
   viewportHistoryAtom,
 } from "./atoms";
@@ -35,6 +36,7 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
   const [, setToolbarHidden] = useAtom(isPresentationToolbarHiddenAtom);
   const setViewportHistory = useSetAtom(viewportHistoryAtom);
   const setPresentationStartedAt = useSetAtom(presentationStartedAtAtom);
+  const recordingPhase = useAtomValue(recordingStateAtom).phase;
 
   const cameraBeforePresentation = useRef<StudioViewport | null>(null);
   const toolBeforePresentation = useRef<AppState["activeTool"] | null>(null);
@@ -106,6 +108,8 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
       return;
     }
 
+    // Exiting Presentation Mode does not stop a recording: the recording HUD
+    // remains reachable outside Presentation Mode, and the session continues.
     setIsPresenting(false);
     setToolbarHidden(false);
     setPresentationStartedAt(null);
@@ -143,6 +147,27 @@ export const usePresentationMode = ({ excalidrawAPI, appRootRef }: Options) => {
     setToolbarHidden,
     setIsPresenting,
   ]);
+
+  // Warn on reload/close while a recording is active. Browsers show a generic
+  // message and may ignore it; no durable crash recovery is implied.
+  useEffect(() => {
+    const active = ["recording", "paused", "countdown"].includes(
+      recordingPhase,
+    );
+    if (!active) {
+      return;
+    }
+    const view = appRootRef.current?.ownerDocument.defaultView;
+    if (!view) {
+      return;
+    }
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    view.addEventListener("beforeunload", beforeUnload);
+    return () => view.removeEventListener("beforeunload", beforeUnload);
+  }, [appRootRef, recordingPhase]);
 
   // Leaving fullscreen through browser UI (Esc/F11) should not strand the
   // presenter in a chrome-less editor with no visible exit affordance.
