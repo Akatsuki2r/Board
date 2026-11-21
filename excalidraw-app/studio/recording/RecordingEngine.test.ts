@@ -54,6 +54,7 @@ class FakeMediaRecorder {
   addEventListener = vi.fn((name: string, listener: RecorderListener) => {
     this.listeners[name] = [...(this.listeners[name] ?? []), listener];
   });
+  fireStopEvent = () => this.listeners.stop?.forEach((listener) => listener());
 }
 
 const makeSource = () => {
@@ -160,6 +161,8 @@ describe("RecordingEngine", () => {
       stop = vi.fn(() => {
         this.state = "inactive";
         this.onstop?.();
+        // The engine waits for the `stop` event, not `onstop`.
+        this.fireStopEvent();
       });
     }
     const emptyEnvironment = {
