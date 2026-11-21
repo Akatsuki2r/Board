@@ -2,6 +2,8 @@ import {
   loginIcon,
   ExcalLogo,
   eyeIcon,
+  presentationIcon,
+  settingsIcon,
 } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { MainMenu } from "@excalidraw/excalidraw/index";
@@ -13,6 +15,9 @@ import type { Theme } from "@excalidraw/element/types";
 
 import { LanguageList } from "../app-language/LanguageList";
 import { isExcalidrawPlusSignedUser } from "../app_constants";
+import { useAtom } from "../app-jotai";
+import { studioSettingsOpenAtom } from "../studio/atoms";
+import { useStudio } from "../studio/StudioContext";
 
 import { saveDebugState } from "./DebugCanvas";
 
@@ -24,8 +29,20 @@ export const AppMainMenu: React.FC<{
   refresh: () => void;
 }> = React.memo((props) => {
   const { t } = useI18n();
+  const { enter } = useStudio();
+  const [, setStudioSettingsOpen] = useAtom(studioSettingsOpenAtom);
   return (
     <MainMenu>
+      <MainMenu.Item icon={presentationIcon} onSelect={enter}>
+        Present
+      </MainMenu.Item>
+      <MainMenu.Item
+        icon={settingsIcon}
+        onSelect={() => setStudioSettingsOpen(true)}
+      >
+        Presentation Studio settings…
+      </MainMenu.Item>
+      <MainMenu.Separator />
       <MainMenu.DefaultItems.LoadScene />
       <MainMenu.DefaultItems.SaveToActiveFile />
       <MainMenu.DefaultItems.Export />
