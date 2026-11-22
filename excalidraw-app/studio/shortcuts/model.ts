@@ -28,7 +28,12 @@ export type StudioShortcutId =
   | "freehandTool"
   | "textTool"
   | "quickUndo"
-  | "quickErase";
+  | "quickErase"
+  | "startRecording"
+  | "pauseRecording"
+  | "stopRecording"
+  | "cancelCountdown"
+  | "toggleRecordingControls";
 
 /** `null` means the action has no shortcut assigned. */
 export type ShortcutMap = Partial<Record<StudioShortcutId, KeyCombo | null>>;

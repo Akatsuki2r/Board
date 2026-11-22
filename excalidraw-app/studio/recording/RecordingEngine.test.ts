@@ -41,6 +41,9 @@ class FakeMediaRecorder {
     this.state = "recording";
   });
   stop = vi.fn(() => {
+    if (this.state === "inactive") {
+      return;
+    }
     this.state = "inactive";
     this.ondataavailable?.({
       data: new Blob(["chunk"], { type: "video/webm" }),
@@ -51,6 +54,7 @@ class FakeMediaRecorder {
   addEventListener = vi.fn((name: string, listener: RecorderListener) => {
     this.listeners[name] = [...(this.listeners[name] ?? []), listener];
   });
+  fireStopEvent = () => this.listeners.stop?.forEach((listener) => listener());
 }
 
 const makeSource = () => {
@@ -96,6 +100,8 @@ describe("RecordingEngine", () => {
       MediaRecorder: FakeMediaRecorder as unknown as typeof MediaRecorder,
       createObjectURL: vi.fn(() => "blob:recording"),
       revokeObjectURL: vi.fn(),
+      now: () => 0,
+      canvasSupportsCaptureStream: () => true,
     };
   });
 
@@ -128,7 +134,9 @@ describe("RecordingEngine", () => {
 
   it("reports recorder errors through the callback", async () => {
     const onError = vi.fn();
-    const engine = new RecordingEngine(makeSource, environment, onError);
+    const engine = new RecordingEngine(makeSource, environment, {
+      onError,
+    });
     await engine.start();
     instances[0].onerror?.();
     expect(onError).toHaveBeenCalledWith(
@@ -144,6 +152,58 @@ describe("RecordingEngine", () => {
     engine.dispose();
     expect(source.dispose).toHaveBeenCalledTimes(1);
     expect(instances[0].state).toBe("inactive");
+  });
+
+  it("rejects empty recordings instead of exporting an empty file", async () => {
+    // Simulate a recorder that produces no data.
+    instances.length = 0;
+    class EmptyRecorder extends FakeMediaRecorder {
+      stop = vi.fn(() => {
+        this.state = "inactive";
+        this.onstop?.();
+        // The engine waits for the `stop` event, not `onstop`.
+        this.fireStopEvent();
+      });
+    }
+    const emptyEnvironment = {
+      ...environment,
+      MediaRecorder: EmptyRecorder as unknown as typeof MediaRecorder,
+    };
+    const engine = new RecordingEngine(makeSource, emptyEnvironment);
+    await engine.start();
+    await expect(engine.stop()).rejects.toThrow(/no video data/);
+    engine.dispose();
+  });
+
+  it("supports asynchronous capture sources", async () => {
+    const source = makeSource() as unknown as CanvasCompositeSource & {
+      acquire: ReturnType<typeof vi.fn>;
+    };
+    source.acquire = vi.fn().mockResolvedValue(source.getStream());
+    const engine = new RecordingEngine(() => source, environment);
+    await engine.start();
+    expect(source.acquire).toHaveBeenCalledTimes(1);
+    expect(instances).toHaveLength(1);
+    await engine.stop();
+    engine.dispose();
+  });
+
+  it("notifies when a display capture track terminates", async () => {
+    const source = makeSource() as unknown as CanvasCompositeSource & {
+      onTerminated: (cb: () => void) => void;
+    };
+    let onEnded: (() => void) | undefined;
+    source.onTerminated = (cb) => {
+      onEnded = cb;
+    };
+    const onTerminated = vi.fn();
+    const engine = new RecordingEngine(() => source, environment, {
+      onTerminated,
+    });
+    await engine.start();
+    onEnded?.();
+    expect(onTerminated).toHaveBeenCalledTimes(1);
+    engine.dispose();
   });
 
   it("fails gracefully when MediaRecorder is unavailable", async () => {

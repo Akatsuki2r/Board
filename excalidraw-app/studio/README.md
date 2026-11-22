@@ -32,6 +32,15 @@ A thin layer around Excalidraw that turns the app into a presentation studio. No
 
 Viewpoints are scoped by board (URL hash when present, otherwise the local board), ordered as a lightweight sequence and editable in the in-presentation overview (`U`). Each viewpoint can be renamed, annotated, reordered, marked as the default view and deleted with confirmation. `←`/`→` move through the sequence, `M` saves the current camera, `Shift+M` goes home/resets, and `Backspace`/`Shift+Backspace` walk the deliberate-camera history. Transitions use Excalidraw's own animation for fit-to-content and a cancelable, reduced-motion-aware interpolator for viewpoint jumps; all of this is configurable in Settings.
 
+## Recording architecture
+
+Recording is an explicit state machine (`idle → countdown → recording → paused → stopping → processing → ready`, with `failed` branches) owned by a controller-style `RecordingEngine`. The engine holds one `MediaRecorder`, one capture source and one chunk buffer per session; viewport, tool and presentation changes never recreate it. Two capture sources implement `CaptureSource`:
+
+- `CanvasCompositeSource` (default): composites the static, in-progress and interactive editor canvases into a size-synced offscreen canvas via `captureStream(fps)`. DOM chrome and recording controls are excluded.
+- `DisplayCaptureSource`: uses `navigator.mediaDevices.getDisplayMedia()` so the user explicitly picks a screen/window/tab. The selected surface (and anything visible in it, including the HUD) is captured, subject to browser support. Permission denial/cancellation and display-track termination are handled; ending the browser capture triggers a controlled stop that preserves valid chunks.
+
+Completion provides an in-app preview with duration, size and capture mode, a download with a configurable filename prefix, and a discard confirmation. Active recordings are not stopped by leaving Presentation Mode, and a `beforeunload` warning protects against accidental reloads (no durable crash recovery is implied). Pause/resume is bound to Space through a dedicated pan-preserving listener so Space-drag panning still works.
+
 ## Annotation and shortcuts
 
 The toolbar's `A+` group exposes a quick color selector, undo and eraser without leaving Presentation Mode. `Z` undoes through Excalidraw's own history (no second undo stack), `E` toggles the eraser, and the optional one-shot mode returns to navigation after a single annotation. Default annotation color and stroke width are applied on entry and restored on exit; a color chosen while presenting becomes the new default. All bindings are searchable in Settings, support per-action reset, and are checked against both studio and known core/browser conflicts (global bindings that collide are rejected).
@@ -42,6 +51,7 @@ Ten test files cover key matching/conflicts, scope guards, the recording lifecyc
 
 ## Known limitations
 
-- Full-window/screen capture is not implemented; `CaptureSource` leaves room for it.
+- Screen/window capture depends on `getDisplayMedia` support and explicit user permission; it cannot be exercised in headless CI, so only its source logic is unit-tested.
 - The DOM text WYSIWYG overlay is not visible in canvas-only video while text is actively being edited (committed text is captured).
+- No durable crash recovery: a browser process crash loses in-progress recordings. Completed recordings live only as object URLs until exported or discarded.
 - Fullscreen may be rejected by browsers without a trusted user gesture; Presentation Mode still fills the viewport.

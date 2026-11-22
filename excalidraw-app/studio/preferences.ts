@@ -55,9 +55,15 @@ export interface StudioPreferences {
     /** Return to navigation after a single drawn annotation. */
     temporaryMode: boolean;
   };
-  /** Recording settings. Only canvas capture is currently implemented. */
+  /** Recording settings. */
   recording: {
     fps: number;
+    /** Seconds before recording begins; 0 disables the countdown. */
+    countdownSeconds: number;
+    /** Default capture target. Screen mode requires browser permission. */
+    captureMode: "canvas" | "screen";
+    /** Prefix used for exported video filenames. */
+    filenamePrefix: string;
   };
 }
 
@@ -81,6 +87,9 @@ export const createDefaultStudioPreferences = (): StudioPreferences => ({
   },
   recording: {
     fps: 30,
+    countdownSeconds: 3,
+    captureMode: "canvas",
+    filenamePrefix: "presentation",
   },
 });
 
@@ -202,6 +211,25 @@ export const loadStudioPreferences = (): StudioPreferences => {
           parsed.recording.fps <= 60
             ? parsed.recording.fps
             : defaults.recording.fps,
+        countdownSeconds:
+          isRecord(parsed.recording) &&
+          typeof parsed.recording.countdownSeconds === "number" &&
+          parsed.recording.countdownSeconds >= 0 &&
+          parsed.recording.countdownSeconds <= 30
+            ? parsed.recording.countdownSeconds
+            : defaults.recording.countdownSeconds,
+        captureMode:
+          isRecord(parsed.recording) &&
+          (parsed.recording.captureMode === "canvas" ||
+            parsed.recording.captureMode === "screen")
+            ? parsed.recording.captureMode
+            : defaults.recording.captureMode,
+        filenamePrefix:
+          isRecord(parsed.recording) &&
+          typeof parsed.recording.filenamePrefix === "string" &&
+          parsed.recording.filenamePrefix.trim().length > 0
+            ? parsed.recording.filenamePrefix
+            : defaults.recording.filenamePrefix,
       },
     };
   } catch {

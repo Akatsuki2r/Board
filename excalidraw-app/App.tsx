@@ -154,9 +154,13 @@ import { StudioProvider } from "./studio/StudioContext";
 import { usePresentationMode } from "./studio/usePresentationMode";
 import { PresentationControls } from "./studio/components/PresentationControls";
 import { StudioSettingsDialog } from "./studio/components/StudioSettingsDialog";
-import { RecordingControls } from "./studio/components/RecordingControls";
+import {
+  CountdownOverlay,
+  RecordingControls,
+} from "./studio/components/RecordingControls";
 import { PresentationTimer } from "./studio/components/PresentationTimer";
 import { useStudioRecording } from "./studio/recording/useStudioRecording";
+import { useRecordingShortcuts } from "./studio/recording/useRecordingShortcuts";
 import { registerStudioActions } from "./studio/shortcuts";
 import { useStudioNavigation } from "./studio/navigation/useStudioNavigation";
 import { useStudioTools } from "./studio/tools/useStudioTools";
@@ -412,6 +416,8 @@ const ExcalidrawWrapper = () => {
   // this ref so recording ticks and camera moves never re-register shortcuts.
   const studioRef = useRef(studio);
   studioRef.current = studio;
+
+  useRecordingShortcuts(() => studioRef.current, appRootRef);
 
   useEffect(() => {
     if (excalidrawAPI) {
@@ -1187,6 +1193,7 @@ const ExcalidrawWrapper = () => {
           <PresentationControls />
           <PresentationTimer />
           <RecordingControls />
+          <CountdownOverlay />
           <StudioSettingsDialog />
 
           {errorMessage && (

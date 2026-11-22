@@ -388,6 +388,81 @@
   }
 }
 
+.studio-countdown {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 13;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 40px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(18, 18, 20, 0.9);
+  color: #f2f2f4;
+  font-family: inherit;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+
+  &__number {
+    font-size: 72px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__label {
+    font-size: 13px;
+    opacity: 0.75;
+  }
+
+  &__track {
+    width: 200px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+
+    span {
+      display: block;
+      height: 100%;
+      background: #7d78ff;
+      transition: width 100ms linear;
+    }
+  }
+
+  &__cancel {
+    margin-top: 4px;
+    padding: 6px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+}
+
+.studio-recording-reveal {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(18, 18, 20, 0.86);
+  color: #f2f2f4;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+
 .studio-recording {
   position: absolute;
   bottom: 20px;
@@ -427,6 +502,70 @@
     border-color: rgba(224, 49, 49, 0.6);
     white-space: normal;
     max-width: 420px;
+  }
+
+  &__hide {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 14px;
+    opacity: 0.7;
+    cursor: pointer;
+  }
+
+  &__modes {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &__mode {
+    border: 0;
+    border-radius: 999px;
+    padding: 4px 9px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+
+    &--active {
+      background: #7d78ff;
+      color: #fff;
+    }
+  }
+
+  &__preview-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    span {
+      opacity: 0.7;
+      font-size: 11px;
+    }
+  }
+
+  &__confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.4);
+
+    p {
+      margin: 0;
+    }
+
+    > div {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
   }
 
   &__state {

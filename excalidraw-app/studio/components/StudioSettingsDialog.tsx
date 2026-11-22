@@ -409,9 +409,50 @@ export const StudioSettingsDialog = () => {
         <section className="studio-settings__section">
           <h2>Recording</h2>
           <p className="studio-settings__note">
-            Canvas-only capture records the presentation viewport and live
-            annotations. Editor chrome and recording controls are excluded.
+            <strong>Canvas only</strong> records the presentation viewport and
+            live annotations; editor chrome and recording controls are excluded.
+            <strong> Screen/window</strong> uses your browser's picker — the
+            selected window, tab or screen (and anything visible in it,
+            including these controls) is captured, subject to browser support.
           </p>
+          <label className="studio-settings__select-row">
+            <span>Default capture mode</span>
+            <select
+              value={preferences.recording.captureMode}
+              onChange={(event) =>
+                setPreferences({
+                  ...preferences,
+                  recording: {
+                    ...preferences.recording,
+                    captureMode: event.target.value as "canvas" | "screen",
+                  },
+                })
+              }
+            >
+              <option value="canvas">Canvas only</option>
+              <option value="screen">Screen / window</option>
+            </select>
+          </label>
+          <label className="studio-settings__select-row">
+            <span>Countdown before recording</span>
+            <select
+              value={preferences.recording.countdownSeconds}
+              onChange={(event) =>
+                setPreferences({
+                  ...preferences,
+                  recording: {
+                    ...preferences.recording,
+                    countdownSeconds: Number(event.target.value),
+                  },
+                })
+              }
+            >
+              <option value={0}>None</option>
+              <option value={3}>3 seconds</option>
+              <option value={5}>5 seconds</option>
+              <option value={10}>10 seconds</option>
+            </select>
+          </label>
           <label className="studio-settings__select-row">
             <span>Frame rate</span>
             <select
@@ -422,6 +463,23 @@ export const StudioSettingsDialog = () => {
               <option value={30}>30 fps</option>
               <option value={60}>60 fps</option>
             </select>
+          </label>
+          <label className="studio-settings__select-row">
+            <span>Filename prefix</span>
+            <input
+              type="text"
+              value={preferences.recording.filenamePrefix}
+              maxLength={60}
+              onChange={(event) =>
+                setPreferences({
+                  ...preferences,
+                  recording: {
+                    ...preferences.recording,
+                    filenamePrefix: event.target.value,
+                  },
+                })
+              }
+            />
           </label>
         </section>
       </div>

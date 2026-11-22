@@ -10,6 +10,11 @@ import {
   type StudioPreferences,
 } from "./preferences";
 
+import {
+  initialRecordingState,
+  type RecordingStateData,
+} from "./recording/stateMachine";
+
 export type PreferencesUpdate =
   | StudioPreferences
   | ((previous: StudioPreferences) => StudioPreferences);
@@ -25,35 +30,17 @@ export const activeViewpointIdAtom = atom<string | null>(null);
 
 export const viewpointOverviewOpenAtom = atom(false);
 
+/** Session-only: presenter can hide the recording HUD without stopping. */
+export const recordingControlsHiddenAtom = atom(false);
+
 export const studioSettingsOpenAtom = atom(false);
 
 /** Timestamp of the current presentation session; independent of recording. */
 export const presentationStartedAtAtom = atom<number | null>(null);
 
-export type RecordingStatus =
-  | "idle"
-  | "recording"
-  | "paused"
-  | "stopped"
-  | "error";
-
-export interface RecordingState {
-  status: RecordingStatus;
-  elapsedMs: number;
-  error: string | null;
-  url: string | null;
-  mimeType: string | null;
-  durationMs: number;
-}
-
-export const recordingStateAtom = atom<RecordingState>({
-  status: "idle",
-  elapsedMs: 0,
-  error: null,
-  url: null,
-  mimeType: null,
-  durationMs: 0,
-});
+export const recordingStateAtom = atom<RecordingStateData>(
+  initialRecordingState,
+);
 
 /** Session-only: lets the presenter temporarily hide the floating toolbar. */
 export const isPresentationToolbarHiddenAtom = atom(false);

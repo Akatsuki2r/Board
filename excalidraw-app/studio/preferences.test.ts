@@ -90,6 +90,37 @@ describe("studio preferences", () => {
     expect(loadStudioPreferences().annotation).toEqual(preferences.annotation);
   });
 
+  it("validates recording preferences", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        recording: {
+          fps: 90,
+          countdownSeconds: 999,
+          captureMode: "invalid",
+          filenamePrefix: "",
+        },
+      }),
+    );
+    const loaded = loadStudioPreferences();
+    expect(loaded.recording).toEqual({
+      fps: 30,
+      countdownSeconds: 3,
+      captureMode: "canvas",
+      filenamePrefix: "presentation",
+    });
+
+    const preferences = createDefaultStudioPreferences();
+    preferences.recording = {
+      fps: 15,
+      countdownSeconds: 5,
+      captureMode: "screen",
+      filenamePrefix: "demo",
+    };
+    saveStudioPreferences(preferences);
+    expect(loadStudioPreferences().recording).toEqual(preferences.recording);
+  });
+
   it("round-trips valid transition settings", () => {
     const preferences = createDefaultStudioPreferences();
     preferences.presentation.transitionDurationMs = 500;
