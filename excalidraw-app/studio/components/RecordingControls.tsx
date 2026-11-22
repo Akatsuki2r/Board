@@ -82,14 +82,23 @@ export const RecordingControls = () => {
     stop,
     discard,
     cancelCountdown,
+    enter,
   } = useStudio();
   const [mode, setMode] = useState<CaptureMode>(captureMode);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [returning, setReturning] = useState(false);
+  const [confirmNewRecording, setConfirmNewRecording] = useState(false);
+  const [previewHidden, setPreviewHidden] = useState(false);
   const [preferences] = useAtom(studioPreferencesAtom);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMode(captureMode), [captureMode]);
+  useEffect(() => {
+    if (phase !== "ready") {
+      setPreviewHidden(false);
+      setConfirmNewRecording(false);
+    }
+  }, [phase]);
 
   if (!isPresenting && phase === "idle") {
     return null;
@@ -98,7 +107,8 @@ export const RecordingControls = () => {
   const isActive = phase === "recording" || phase === "paused";
   const isBusy =
     phase === "countdown" || phase === "stopping" || phase === "processing";
-  const hasPreview = phase === "ready" && !!result;
+  const hasPreview = phase === "ready" && !!result && !previewHidden;
+  const hasResult = phase === "ready" && !!result;
   const downloadName = `${preferences.recording.filenamePrefix}-${new Date()
     .toISOString()
     .slice(0, 19)
@@ -191,6 +201,12 @@ export const RecordingControls = () => {
                   onClick={() => {
                     if (confirmDiscard) {
                       discard();
+                    } else {
+                      // Close only the preview; the result remains exportable.
+                      setPreviewHidden(true);
+                      if (!isPresenting) {
+                        enter();
+                      }
                     }
                     setConfirmDiscard(false);
                     setReturning(false);
@@ -271,12 +287,29 @@ export const RecordingControls = () => {
                 </button>
               ))}
             </span>
+            {hasResult && previewHidden && (
+              <button
+                type="button"
+                className="studio-recording__button"
+                title="Show the completed recording"
+                aria-label="Show completed recording"
+                onClick={() => setPreviewHidden(false)}
+              >
+                Preview
+              </button>
+            )}
             <button
               type="button"
               className="studio-recording__button studio-recording__button--primary"
               title="Start recording"
               aria-label="Start recording"
-              onClick={() => start(mode)}
+              onClick={() => {
+                if (hasResult) {
+                  setConfirmNewRecording(true);
+                } else {
+                  start(mode);
+                }
+              }}
             >
               ● Record
             </button>
@@ -327,6 +360,34 @@ export const RecordingControls = () => {
           </button>
         )}
       </div>
+
+      {confirmNewRecording && (
+        <div className="studio-recording__confirm" role="alertdialog">
+          <p>
+            Starting a new recording will discard the current unsaved video.
+            Download it first if you want to keep it.
+          </p>
+          <div>
+            <button
+              type="button"
+              className="studio-recording__button"
+              onClick={() => setConfirmNewRecording(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="studio-recording__button studio-recording__button--stop"
+              onClick={() => {
+                setConfirmNewRecording(false);
+                start(mode);
+              }}
+            >
+              Discard & record
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
