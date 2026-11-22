@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
-import { useAtom, useAtomValue } from "../../app-jotai";
+import { appJotaiStore, useAtom, useAtomValue } from "../../app-jotai";
 import {
   recordingControlsHiddenAtom,
   recordingStateAtom,
@@ -162,6 +162,8 @@ export const useStudioRecording = (
       const engine = new RecordingEngine(createSource, environment, {
         onError: (message) => {
           stopTimer();
+          engineRef.current?.dispose();
+          engineRef.current = null;
           dispatch({ type: "FAIL", error: message });
         },
         onTerminated: () => {
@@ -171,13 +173,25 @@ export const useStudioRecording = (
       });
 
       if (!engine.isSupported()) {
+        engine.dispose();
         throw new Error("Video recording is not supported in this browser.");
       }
 
+      stopTimer();
       engineRef.current?.dispose();
       engineRef.current = engine;
       clearPreview();
-      await engine.start();
+      try {
+        await engine.start();
+        // A positive countdown leaves the reducer in "countdown" until the
+        // engine is actually running; without this, pause/stop are rejected.
+        dispatch({ type: "COUNTDOWN_DONE" });
+      } catch (error) {
+        engine.dispose();
+        engineRef.current = null;
+        stopTimer();
+        throw error;
+      }
 
       timerRef.current =
         view?.setInterval(() => {
@@ -222,6 +236,17 @@ export const useStudioRecording = (
 
   const start = useCallback(
     (mode?: CaptureMode) => {
+      // Never replace a live session from a shortcut or repeated click.
+      const currentPhase = appJotaiStore.get(recordingStateAtom).phase;
+      if (
+        currentPhase === "countdown" ||
+        currentPhase === "recording" ||
+        currentPhase === "paused" ||
+        currentPhase === "stopping" ||
+        currentPhase === "processing"
+      ) {
+        return;
+      }
       const selected = mode ?? preferences.recording.captureMode;
       const countdownMs = preferences.recording.countdownSeconds * 1000;
       stopCountdown();

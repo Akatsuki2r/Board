@@ -68,6 +68,9 @@ export class RecordingEngine {
   private lastElapsedMs = 0;
   private terminated = false;
   private disposed = false;
+  private stopDeferred: { promise: Promise<void>; resolve: () => void } | null =
+    null;
+  private stopEventFired = false;
 
   constructor(
     private createSource: () => CaptureSource,
@@ -99,18 +102,42 @@ export class RecordingEngine {
     }
 
     this.mimeType = pickMimeType(Recorder);
-    this.source = this.createSource();
-    // Display capture requires an asynchronous permission picker.
-    const asyncSource = this.source as unknown as {
+    const source = this.createSource();
+    this.source = source;
+    this.chunks = [];
+    this.terminated = false;
+    this.stopEventFired = false;
+
+    let resolveStop!: () => void;
+    this.stopDeferred = {
+      promise: new Promise<void>((resolve) => {
+        resolveStop = resolve;
+      }),
+      resolve: resolveStop,
+    };
+
+    // Display capture requires an asynchronous permission picker. If the
+    // session is disposed while the picker is open, release the late stream.
+    const asyncSource = source as unknown as {
       acquire?: () => Promise<MediaStream>;
     };
     if (typeof asyncSource.acquire === "function") {
-      await asyncSource.acquire();
+      try {
+        await asyncSource.acquire();
+      } catch (error) {
+        if (this.source === source) {
+          this.source = null;
+        }
+        source.dispose();
+        throw error;
+      }
+      if (this.disposed || this.source !== source) {
+        source.dispose();
+        throw new Error("Recording was disposed before capture started.");
+      }
     }
-    this.chunks = [];
-    this.terminated = false;
 
-    const recorder = new Recorder(this.source.getStream(), {
+    const recorder = new Recorder(source.getStream(), {
       ...(this.mimeType ? { mimeType: this.mimeType } : {}),
     });
     this.recorder = recorder;
@@ -125,10 +152,12 @@ export class RecordingEngine {
     recorder.onstop = () => {
       // Keep the source alive until stop() has assembled the final chunks.
       this.lastElapsedMs = this.getElapsedMs();
+      this.stopEventFired = true;
+      this.stopDeferred?.resolve();
     };
 
     // Display capture can end from the browser UI at any time.
-    this.source.onTerminated?.(() => {
+    source.onTerminated?.(() => {
       if (this.disposed || this.terminated) {
         return;
       }
@@ -173,18 +202,22 @@ export class RecordingEngine {
   /** Stops the recorder, waits for final data, and validates the Blob. */
   async stop(): Promise<RecordingResult> {
     const recorder = this.recorder;
-    if (!recorder || recorder.state === "inactive") {
+    if (!recorder) {
       throw new Error("There is no active recording to stop.");
     }
 
     const durationMs = this.getElapsedMs();
-    await new Promise<void>((resolve) => {
-      // MediaRecorder sets state to "inactive" synchronously, but the final
-      // `dataavailable` event arrives asynchronously before `stop`. Resolving
-      // on the state change would assemble an empty Blob, so wait for `stop`.
-      recorder.addEventListener("stop", () => resolve(), { once: true });
+    if (recorder.state !== "inactive") {
       recorder.stop();
-    });
+    } else if (!this.stopEventFired) {
+      // A browser-ended capture may already have stopped the recorder without
+      // its onstop callback having run yet. Assemble whatever chunks exist.
+      this.stopDeferred?.resolve();
+    }
+    // MediaRecorder sets state to "inactive" synchronously, but the final
+    // `dataavailable` event arrives asynchronously before `stop`. Waiting on
+    // the deferred stop event preserves those final chunks.
+    await this.stopDeferred?.promise;
 
     const type = this.mimeType || "video/webm";
     const blob = new Blob(this.chunks, { type });
@@ -206,19 +239,19 @@ export class RecordingEngine {
 
   /** Returns whatever valid media exists after an interruption. */
   async salvage(): Promise<RecordingResult | null> {
-    const recorder = this.recorder;
-    if (!recorder) {
+    if (!this.recorder) {
       return null;
     }
     try {
-      await this.stop();
+      return await this.stop();
     } catch {
       return null;
     }
-    return null;
   }
 
   private releaseRecorder() {
+    this.stopDeferred?.resolve();
+    this.stopDeferred = null;
     this.recorder = null;
     this.chunks = [];
     this.startedAt = 0;

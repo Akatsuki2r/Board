@@ -206,6 +206,44 @@ describe("RecordingEngine", () => {
     engine.dispose();
   });
 
+  it("assembles chunks when a display capture ends the recorder externally", async () => {
+    const source = makeSource();
+    const engine = new RecordingEngine(() => source, environment);
+    await engine.start();
+    const recorder = instances[0];
+    // Simulate the browser stopping the recorder before stop() is called.
+    recorder.stop();
+    const result = await engine.stop();
+    expect(result.blob.size).toBeGreaterThan(0);
+    engine.dispose();
+  });
+
+  it("disposes a stream acquired after the session was disposed", async () => {
+    let resolveAcquire: (() => void) | undefined;
+    const source = makeSource() as unknown as CanvasCompositeSource & {
+      acquire: () => Promise<void>;
+      dispose: ReturnType<typeof vi.fn>;
+    };
+    source.acquire = () =>
+      new Promise<void>((resolve) => {
+        resolveAcquire = resolve;
+      });
+    const engine = new RecordingEngine(() => source, environment);
+    const starting = engine.start();
+    engine.dispose();
+    resolveAcquire?.();
+    await expect(starting).rejects.toThrow(/disposed before capture started/);
+    expect(source.dispose).toHaveBeenCalled();
+  });
+
+  it("salvage returns a valid interrupted recording", async () => {
+    const engine = new RecordingEngine(makeSource, environment);
+    await engine.start();
+    const result = await engine.salvage();
+    expect(result?.blob.size).toBeGreaterThan(0);
+    expect(result?.url).toBe("blob:recording");
+  });
+
   it("fails gracefully when MediaRecorder is unavailable", async () => {
     const engine = new RecordingEngine(makeSource, {
       ...environment,
