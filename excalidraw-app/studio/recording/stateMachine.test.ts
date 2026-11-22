@@ -60,6 +60,26 @@ describe("recording state machine", () => {
     expect(s.captureMode).toBe("screen");
   });
 
+  it("advances from countdown once the engine has started", () => {
+    const countdown = recordingReducer(state("idle"), {
+      type: "START",
+      countdownMs: 3000,
+      mode: "canvas",
+    });
+    expect(recordingReducer(countdown, { type: "COUNTDOWN_DONE" }).phase).toBe(
+      "recording",
+    );
+    // A zero-countdown start is already recording; the event is ignored.
+    const immediate = recordingReducer(state("idle"), {
+      type: "START",
+      countdownMs: 0,
+      mode: "canvas",
+    });
+    expect(recordingReducer(immediate, { type: "COUNTDOWN_DONE" }).phase).toBe(
+      "recording",
+    );
+  });
+
   it("allows cancelling a countdown back to idle", () => {
     const s = recordingReducer(state("countdown"), {
       type: "CANCEL_COUNTDOWN",

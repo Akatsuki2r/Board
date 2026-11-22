@@ -106,6 +106,8 @@ export const recordingReducer = (
         ? state
         : { ...state, elapsedMs: event.elapsedMs };
     case "COUNTDOWN_DONE":
+      // A zero-countdown start is already in "recording"; the reducer guards
+      // the transition, so this event is safely ignored in that case.
       return { ...state, phase: "recording", countdownRemainingMs: 0 };
     case "CANCEL_COUNTDOWN":
       return initialRecordingState;

@@ -121,6 +121,28 @@ describe("registerStudioActions", () => {
     ).toBe(true);
   });
 
+  it("lets Escape cancel a countdown instead of exiting presentation", async () => {
+    const { recordingStateAtom } = await import("./atoms");
+    const studio = makeStudio();
+    registerStudioActions(api, () => studio);
+    appJotaiStore.set(recordingStateAtom, {
+      ...appJotaiStore.get(recordingStateAtom),
+      phase: "countdown",
+    });
+    const exit = find("studioExitPresentation");
+    const cancel = find("studioCancelCountdown");
+    expect(
+      exit.keyTest?.(keyEvent("Escape", "Escape"), appState, [], {} as never),
+    ).toBe(false);
+    expect(
+      cancel.keyTest?.(keyEvent("Escape", "Escape"), appState, [], {} as never),
+    ).toBe(true);
+    appJotaiStore.set(recordingStateAtom, {
+      ...appJotaiStore.get(recordingStateAtom),
+      phase: "idle",
+    });
+  });
+
   it("binds presentation-only quick undo and eraser", () => {
     const studio = makeStudio();
     registerStudioActions(api, () => studio);
