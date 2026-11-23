@@ -128,6 +128,12 @@ describe("studio shortcut config", () => {
     expect(findCoreShortcutConflict({ key: "j" })).toBeNull();
   });
 
+  it("keeps Escape for both exit and countdown cancellation", () => {
+    const parsed = validateShortcutMap({});
+    expect(parsed.exitPresentation).toMatchObject({ key: "Escape" });
+    expect(parsed.cancelCountdown).toMatchObject({ key: "Escape" });
+  });
+
   it("drops duplicate assignments from persisted maps", () => {
     const parsed = validateShortcutMap({
       ...DEFAULT_SHORTCUTS,

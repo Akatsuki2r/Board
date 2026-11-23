@@ -322,18 +322,27 @@ export const validateShortcutMap = (value: unknown): ShortcutMap => {
   }
 
   // A hand-edited or older storage payload could contain duplicates; keep the
-  // first assignment so the action manager never cancels both actions.
-  const seen = new Set<string>();
+  // first assignment so the action manager never cancels both actions. Escape
+  // is intentionally shared between exit and countdown-cancel: their contexts
+  // are resolved by keyTest (cancel wins while the countdown is active).
+  const seen: Array<{ id: StudioShortcutId; signature: string }> = [];
   for (const definition of SHORTCUT_DEFINITIONS) {
     const combo = result[definition.id];
     if (!combo) {
       continue;
     }
     const signature = canonical(combo);
-    if (seen.has(signature)) {
+    const existing = seen.find((entry) => entry.signature === signature);
+    const intentionalOverlap =
+      existing &&
+      ((existing.id === "exitPresentation" &&
+        definition.id === "cancelCountdown") ||
+        (existing.id === "cancelCountdown" &&
+          definition.id === "exitPresentation"));
+    if (existing && !intentionalOverlap) {
       delete result[definition.id];
     } else {
-      seen.add(signature);
+      seen.push({ id: definition.id, signature });
     }
   }
   return result;

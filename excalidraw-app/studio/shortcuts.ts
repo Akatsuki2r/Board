@@ -169,14 +169,18 @@ export const registerStudioActions = (
       ) {
         return false;
       }
-      // Escape first exits the active canvas layer (linear editor / in-progress
-      // multi-point element) before leaving Presentation Mode.
-      if (
-        definition.id === "exitPresentation" &&
-        (appState.selectedLinearElement?.isEditing ||
-          appState.multiElement !== null)
-      ) {
-        return false;
+      // Escape exits the active layer first: countdown, then canvas layer,
+      // and only then Presentation Mode itself.
+      if (definition.id === "exitPresentation") {
+        if (appJotaiStore.get(recordingStateAtom).phase === "countdown") {
+          return false;
+        }
+        if (
+          appState.selectedLinearElement?.isEditing ||
+          appState.multiElement !== null
+        ) {
+          return false;
+        }
       }
       return comboMatchesEvent(combo, event);
     },
